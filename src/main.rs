@@ -1,87 +1,145 @@
-use std::process::exit;
+use std::{collections::HashMap, process::exit};
+mod parsing;
+mod data_types;
+use data_types::fact::*;
 
-fn find_subgoals(goal: &str, rules: &Vec<String>) -> Vec<String> {
-    let mut subgoals: Vec<String> = vec![];
+use parsing::parser::*;
 
-    let findthis = format!("{}:-", goal);
-    for rule in rules {
-        if let Some(pos) = rule.find(findthis.as_str()) {
-            let subgoal = rule[(pos + findthis.len())..].trim();
-            subgoals.push(subgoal.to_string());
-        }
-    }
-    subgoals
+struct KnowledgeEngine<'a> {
+	pub data: HashMap<&'a str, &'a Knowledge<'a>>,
 }
 
-fn conditional_save(fact: String, facts: &mut Vec<String>, truth_value: Option<bool>) {
-    if truth_value == Some(true) {
-        if !facts.contains(&fact) {
-            facts.push(fact)
-        }
-    }
+fn prove(goal: &str, knowledge: &KnowledgeEngine) {
+	//get the goal in the knowledge, if it exists and its fact is set to true, say it
+	let existing_knowledge = knowledge.data.get(goal);
+	println!("{:?}", existing_knowledge.is_some());
+	if existing_knowledge.is_some() {
+		//TODO
+	} else {
+		println!("Unknown goal requested : {}", goal);
+	}
 }
 
-fn prove(goal: &str, mut depth: usize, rules: &Vec<String>, facts: &mut Vec<String>) -> bool {
-    println!("{} PROVE {}", "\t".repeat(depth), goal);
-    depth += 1;
-    let mut once_true: bool = false;
+fn is_knowledge_true(knowledge: &Knowledge, brain: &KnowledgeEngine) -> bool {
+	//the knowledge is a fact, then it is true by default
+	if knowledge.fact {
+		return true;
+	}
 
-    if facts.contains(&goal.to_string()) {
-        once_true = true;
-    } else {
-        let subgoals = find_subgoals(goal, &rules);
-        let mut connective = "AND".to_string();
-        for g in subgoals {
-            let mut truth_value: Option<bool> = None;
-            let subgoal = g.split(' ');
-            let mut cnt = 1;
-            for s in subgoal {
-                if cnt % 2 == 0 {
-                    if !["AND", "OR"].contains(&s) {
-                        eprintln!("ERROR: {} is not a connective", s);
-                        exit(1)
-                    } else {
-                        connective = s.to_string();
-                    }
-                } else {
-                    let trust_val = prove(s, depth, rules, facts);
-                    conditional_save(s.to_string(), facts, truth_value);
-                    if truth_value == Some(true) {
-                        truth_value = Some(trust_val);
-                    } else if connective == "AND" {
-                        truth_value = truth_value.and(Some(trust_val));
-                    } else if connective == "OR" {
-                        truth_value = truth_value.or(Some(trust_val));
-                    }
-                }
-                cnt += 1;
-            }
-            if truth_value == Some(true) {
-                once_true = true;
-            }
-        }
-    }
-    println!("{}{} is {}", "\t".repeat(depth), goal, once_true);
-    once_true
+	//solve the knowledge
+	let knowledge_req = &knowledge.requirements;
+	
+	//the knowledge has no requirements, hence it should be false ?
+	if knowledge_req.len() == 0 {
+		return false
+	}
+
+	let first_req = knowledge_req.first().unwrap();
+	
+	//only one parameter
+	if knowledge_req.len() == 1 {
+		//check that the only requirement is true
+		return is_knowledge_true(&first_req.knowledge, &brain);
+	}
+	are_requirements_met(&knowledge_req, &brain)
 }
 
+//anything passed to this function must be a vec of at least 2 elements, otherwise it will return false.
+fn are_requirements_met(requirements: &Vec<Requirement>, brain: &KnowledgeEngine) -> bool {
+	if requirements.len() < 2 {
+		return false;
+	}
+	//init with the first requirement
+	let first_req = requirements.first().unwrap();
+
+	//skip first element, then iter on every others
+	let requirement_iter =  requirements.iter().skip(1);
+	//will have problem here with the first one
+	let mut last_condition = first_req.condition;
+	let mut last_result = match_requirement(first_req, brain, first_req.condition, true, false);
+	for requirement in requirement_iter {
+		
+		last_result = match_requirement(requirement, brain, requirement.condition, last_result, requirement.condition == last_condition);
+		if !last_result {
+			return false;
+		}
+		last_condition = requirement.condition;
+	}
+
+	true
+}
+
+//A ^ B ^ C
+//last_result is the last result for the current condition
+fn match_requirement(current: &Requirement, brain: &KnowledgeEngine, condition: Condition, last_result: bool, same_condition: bool) -> bool {
+	let current_knowledge_truthy = is_knowledge_true(&current.knowledge, &brain);
+
+	match condition {
+		Condition::AND => {
+			if current_knowledge_truthy == false || last_result == false {
+				return false;
+			}
+		},
+		Condition::OR => {
+			if last_result == true && current_knowledge_truthy == true && same_condition == true {
+				return false;
+			}
+		}
+		_ => {},
+	}
+	true
+}
+
+//testing 
+//knowledge = A && B = C
+//=AB
+//?C
 fn main() {
-    let rules: Vec<String> = vec![
-        "graduate:- has_theory AND has_database AND has_advprog AND has_english".to_string(),
-        "has_theory:- has_datastruct OR has_automata".to_string(),
-        "has_database:- cs450 OR cs451".to_string(),
-        "has_datastruct:- cs460 AND cs461".to_string(),
-        "has_automata:- cs470 AND cs471".to_string(),
-        "has_advprog:- cs350 OR cs351 OR cs352".to_string(),
-        "has_english:- eng101 OR eng102 OR eng103".to_string(),
-    ];
-    let mut facts: Vec<String> = vec![
-        "eng101".to_string(),
-        "cs450".to_string(),
-        "cs491".to_string(),
-        "cs352".to_string(),
-        "cs460".to_string(),
-    ];
+	let mut ke: KnowledgeEngine = KnowledgeEngine {
+		data: HashMap::new()
+	};
+	let symbol_a: &str = "A".into();
+	let knowledge_a: Knowledge = Knowledge {
+		symbol: symbol_a,
+		fact: true,
+		requirements: Vec::new()
+	};
 
-    prove("graduate", 0, &rules, &mut facts);
+	let symbol_b: &str = "B".into();
+	let knowledge_b: Knowledge = Knowledge {
+		symbol: symbol_b,
+		fact: true,
+		requirements: Vec::new()
+	};
+	ke.data.insert(symbol_b, &knowledge_b);
+
+	let goal_one = Requirement {
+		knowledge: &knowledge_a,
+		condition: Condition::AND,
+		should_exist: true,
+	};
+
+	let goal_two = Requirement {
+		knowledge: &knowledge_b,
+		condition: Condition::END,
+		should_exist: true,
+	};
+
+	ke.data.insert(symbol_a, &knowledge_a);
+
+	let symbol_c: &str = "C".into();
+	let mut knowledge_c: Knowledge = Knowledge {
+		symbol: symbol_c,
+		fact: false,
+		requirements: Vec::new()
+	};
+	
+	knowledge_c.requirements.push(goal_one);
+	knowledge_c.requirements.push(goal_two);
+
+	ke.data.insert(symbol_c, &knowledge_c);
+
+	prove("C".into(),&ke);
+	test();
+
 }
