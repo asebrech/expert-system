@@ -6,7 +6,7 @@ use data_types::fact::*;
 use parsing::parser::*;
 
 struct KnowledgeEngine<'a> {
-    pub data: HashMap<&'a str, &'a Knowledge<'a>>,
+    pub data: HashMap<&'a str, Vec<&'a Knowledge<'a>>>, //Need to put vector as we can have several rule for one knowledge
 }
 
 fn prove(goal: &str, knowledge: &KnowledgeEngine) {
@@ -15,6 +15,7 @@ fn prove(goal: &str, knowledge: &KnowledgeEngine) {
     println!("{:?}", existing_knowledge.is_some());
     if existing_knowledge.is_some() {
         //TODO
+        //is_knowledge_true(&existing_knowledge.unwrap(), &knowledge);
     } else {
         println!("Unknown goal requested : {}", goal);
     }
@@ -102,79 +103,10 @@ fn match_requirement(
 }
 
 //testing
-//knowledge = A && B (E && F) = C
+//knowledge = A + (E + F) = C
 //=AB
 //?C
 fn main() {
-    let mut kf: KnowledgeEngine = KnowledgeEngine {
-        data: HashMap::new(),
-    };
-    let symbol_e: &str = "E".into();
-    let knowledge_e: Knowledge = Knowledge {
-        symbol: symbol_e,
-        fact: true,
-        requirements: Vec::new(),
-        data: None,
-    };
-
-    let symbol_f: &str = "F".into();
-    let knowledge_f: Knowledge = Knowledge {
-        symbol: symbol_f,
-        fact: true,
-        requirements: Vec::new(),
-        data: None,
-    };
-    kf.data.insert(symbol_e, &knowledge_e);
-    kf.data.insert(symbol_f, &knowledge_f);
-
-    let mut ke: KnowledgeEngine = KnowledgeEngine {
-        data: HashMap::new(),
-    };
-
-    let symbol_a: &str = "A".into();
-    let knowledge_a: Knowledge = Knowledge {
-        symbol: symbol_a,
-        fact: true,
-        requirements: Vec::new(),
-        data: None,
-    };
-
-    let symbol_b: &str = "B".into();
-    let knowledge_b: Knowledge = Knowledge {
-        symbol: symbol_b,
-        fact: true,
-        requirements: Vec::new(),
-        data: Some(kf.data),
-    };
-    ke.data.insert(symbol_b, &knowledge_b);
-
-    let goal_one = Requirement {
-        knowledge: &knowledge_a,
-        condition: Condition::AND,
-        should_exist: true,
-    };
-
-    let goal_two = Requirement {
-        knowledge: &knowledge_b,
-        condition: Condition::END,
-        should_exist: true,
-    };
-
-    ke.data.insert(symbol_a, &knowledge_a);
-
-    let symbol_c: &str = "C".into();
-    let mut knowledge_c: Knowledge = Knowledge {
-        symbol: symbol_c,
-        fact: false,
-        requirements: Vec::new(),
-        data: None,
-    };
-
-    knowledge_c.requirements.push(goal_one);
-    knowledge_c.requirements.push(goal_two);
-
-    ke.data.insert(symbol_c, &knowledge_c);
-
-    prove("C".into(), &ke);
+    //prove("C".into(), &ke);
     test();
 }
