@@ -23,6 +23,8 @@ pub enum Condition {
 // Y = X + V
 // !A <=> A   <=== impossible, contradiction
 
+//C => !X | V
+//
 
 // A => B    <== true
 // C => B    <=== false
@@ -33,11 +35,25 @@ pub enum Condition {
 //C = A + B
 
 
+//=A
+//A => B ^ C
+
 pub struct Requirement<'a> {
-    pub knowledge: &'a Knowledge<'a>,
+    pub knowledge: &'a Knowledge<'a>, 
     pub condition: Condition,
     pub should_exist: bool,
 }
+//=YB
+//Y => C
+//B <=> A | C + Y
+//A | C + Y => B
+
+//A | C + Y + A => A
+//A | C + Y + C => C
+//A | C + Y + Y => Y
+// combine B and A | C + Y et check si A existe
+//(B) + (A | C + Y) + A => A
+
 
 pub struct Knowledge<'a> {
     pub symbol: &'a str, //(E + F)   (!(E + F) ^ G)
