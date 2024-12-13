@@ -39,14 +39,14 @@ pub enum Condition {
 //A => B ^ C
 
 pub struct Requirement<'a> {
-    pub knowledge: &'a Knowledge<'a>, 
-    pub condition: Condition,
-    pub should_exist: bool,
+    pub knowledge: Knowledge<'a>, //A => [!A, A, A, !A]
+    pub condition: Condition,           //   [false, true, true, false]
 }
 //=YB
 //Y => C
 //B <=> A | C + Y
 //A | C + Y => B
+
 
 //A | C + Y + A => A
 //A | C + Y + C => C
@@ -56,10 +56,18 @@ pub struct Requirement<'a> {
 
 
 pub struct Knowledge<'a> {
-    pub symbol: &'a str, //(E + F)   (!(E + F) ^ G)
+    pub symbol: &'a str, //(!(E + F) ^ G) => !A
     pub fact: bool,
     pub requirements: Vec<Requirement<'a>>, //E AND F
+    pub not: bool,
 }
 
 
+//(E + F) not true
+//E AND F
+
+//(!(E + F) ^ G) not false
+
 //(!(E + F) ^ G)
+//
+//

@@ -103,12 +103,72 @@ fn match_requirement(
     true
 }
 
+
+
+
 //testing
 //knowledge = A + (E + F) = C
 //A => B
 //Y => B
 //=AB
 //?C
+
+
+//?ABC
+// while y a des symbol A, B, C
+//get un symbol A 
+//dit si il existe
+//
+
+/*
+    --verbose print chaques step
+    =BE
+    B + C => A
+    E => C
+    A => !C
+    B => !C
+    !C => W
+
+    Format print :
+
+    Solving A
+    Rule : B + C => A
+    ----Solving B
+        B is a fact
+        B is true
+    AND
+    ----Solving C, C has 4 rules, if one of them is false
+         or undetermined
+        , it is undetermined
+        if all rules are false, it is false
+        if all rules are true, it is true
+        if there are mixed result, it is undetermined
+        1. Rule : E => C
+        ----Solving E
+            E is a fact
+            E is true
+        C is true
+
+        2. Rule : Y => C
+        ----Solving Y
+            Y is a fact
+            Y is true
+        C is true
+
+        3. Rule : A => !C
+        ----Solving A
+            Error: A has a cross dependance with C
+            A is undetermined
+        C is undetermined
+
+        4. Rule : Y => !C
+        ----Solving Y
+            Y is false
+        C is false
+    A is undetermined
+*/
+
+
 fn main() {
 
     /*let mut ke: KnowledgeEngine = KnowledgeEngine {
