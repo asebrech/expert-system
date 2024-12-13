@@ -108,5 +108,8 @@ fn match_requirement(
 //?C
 fn main() {
     //prove("C".into(), &ke);
-    test();
+    // test();
+
+    let file_path = "resources/input.txt";
+    parse_file(file_path);
 }
