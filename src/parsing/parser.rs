@@ -46,6 +46,8 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
+use crate::{Condition, Requirement};
+
 pub fn read_file(file_path: &str) -> io::Result<Vec<String>> {
     let path = Path::new(file_path);
     let file = File::open(path)?;
@@ -56,6 +58,17 @@ pub fn read_file(file_path: &str) -> io::Result<Vec<String>> {
         lines.push(line?);
     }
     Ok(lines)
+}
+
+pub fn pasre(lines: Vec<String>) {
+    let mut vec: Vec<String> = Vec::new();
+    for line in lines {
+        parse_line(&line, &mut vec);
+    }
+    for a in vec {
+        println!("{}", a);
+        check_line(&a);
+    }
 }
 
 pub fn parse_line(line: &str, vec: &mut Vec<String>) {
@@ -72,13 +85,57 @@ pub fn parse_line(line: &str, vec: &mut Vec<String>) {
     }
 }
 
+pub fn get_condition(operator: char) -> Condition {
+    match operator {
+        '|' => Condition::OR,
+        '^' => Condition::XOR,
+        '+' => Condition::AND,
+        _ => Condition::END,
+    }
+}
+
 pub fn check_line(line: &str) {
-    let mut chars: Vec<char> = line.chars().collect();
+    let chars: Vec<char> = line.chars().collect();
 
+    let mut requirements: Vec<Requirement> = Vec::new();
+    let operators: Vec<char> = vec!['|', '^', '+'];
+    let mut check_operator = false;
+    let len = chars.len();
     let mut index = 0;
-
-    while index < chars.len() {
-        index += 1;
+    while index < len {
+        let mut not = false;
+        let mut symbol = String::new();
+        let mut operator = ' ';
+        if chars[index] != '!'
+            && !chars[index].is_alphabetic()
+            && !operators.contains(&chars[index])
+        {
+            let end: String = chars[index..len].iter().collect();
+            println!("{} is the end rule", end);
+            break;
+        }
+        if chars[index] == '!' {
+            not = true;
+            index += 1;
+        }
+        if index < len && !check_operator && chars[index].is_alphabetic() {
+            symbol = chars[index].to_string();
+            print!("symbole :{} ", chars[index]);
+            index += 1;
+            check_operator = !check_operator;
+        }
+        if index < len && check_operator && operators.contains(&chars[index]) {
+            operator = chars[index];
+            print!("operator :{} ", chars[index]);
+            check_operator = !check_operator;
+            index += 1;
+        }
+        if symbol.is_empty() {
+            println!("Error");
+            break;
+        }
+        let requirement = Requirement::new(symbol, get_condition(operator), not);
+        requirements.push(requirement);
     }
 }
 
@@ -86,13 +143,7 @@ pub fn parse_file(file_path: &str) {
     // let mut data: HashMap<String, Vec<Knowledge>> = HashMap::new();
     match read_file(file_path) {
         Ok(lines) => {
-            let mut vec: Vec<String> = Vec::new();
-            for line in lines {
-                parse_line(&line, &mut vec);
-            }
-            for a in vec {
-                println!("{}", a);
-            }
+            pasre(lines);
         }
         Err(e) => {
             println!("Error reading file: {}", e);
