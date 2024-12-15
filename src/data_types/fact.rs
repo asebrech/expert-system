@@ -39,8 +39,9 @@ pub enum Condition {
 //A => B ^ C
 
 pub struct Requirement<'a> {
-    pub knowledge: Knowledge<'a>, //A => [!A, A, A, !A]
+    pub symbol: &'a str, //A => [!A, A, A, !A]
     pub condition: Condition,           //   [false, true, true, false]
+    pub not: bool,
 }
 //=YB
 //Y => C

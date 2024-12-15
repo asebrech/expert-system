@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use crate::{prove, KnowledgeEngine};
+    use crate::{ KnowledgeEngine};
 
 
 
