@@ -40,13 +40,15 @@
 
 */
 
+// use crate::data_types::fact::*;
+// use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
 pub fn read_file(file_path: &str) -> io::Result<Vec<String>> {
     let path = Path::new(file_path);
-    let file = File::open(&path)?;
+    let file = File::open(path)?;
     let reader = io::BufReader::new(file);
 
     let mut lines = Vec::new();
@@ -56,11 +58,40 @@ pub fn read_file(file_path: &str) -> io::Result<Vec<String>> {
     Ok(lines)
 }
 
+pub fn parse_line(line: &str, vec: &mut Vec<String>) {
+    let mut result = String::new();
+    for c in line.chars() {
+        if c == '#' {
+            break;
+        } else if !c.is_whitespace() {
+            result.push(c);
+        }
+    }
+    if !result.is_empty() {
+        vec.push(result);
+    }
+}
+
+pub fn check_line(line: &str) {
+    let mut chars: Vec<char> = line.chars().collect();
+
+    let mut index = 0;
+
+    while index < chars.len() {
+        index += 1;
+    }
+}
+
 pub fn parse_file(file_path: &str) {
+    // let mut data: HashMap<String, Vec<Knowledge>> = HashMap::new();
     match read_file(file_path) {
         Ok(lines) => {
+            let mut vec: Vec<String> = Vec::new();
             for line in lines {
-                println!("{}", line);
+                parse_line(&line, &mut vec);
+            }
+            for a in vec {
+                println!("{}", a);
             }
         }
         Err(e) => {
