@@ -40,13 +40,15 @@
 
 */
 
+use std::collections::HashMap;
 // use crate::data_types::fact::*;
 // use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead};
+use std::panic;
 use std::path::Path;
 
-use crate::{Condition, Requirement};
+use crate::{data_types, Condition, Knowledge, Requirement};
 
 pub fn read_file(file_path: &str) -> io::Result<Vec<String>> {
     let path = Path::new(file_path);
@@ -60,15 +62,19 @@ pub fn read_file(file_path: &str) -> io::Result<Vec<String>> {
     Ok(lines)
 }
 
-pub fn pasre(lines: Vec<String>) {
+pub fn pasre(
+    lines: Vec<String>,
+) -> std::collections::HashMap<std::string::String, std::vec::Vec<data_types::fact::Knowledge>> {
     let mut vec: Vec<String> = Vec::new();
     for line in lines {
         parse_line(&line, &mut vec);
     }
+    let mut data: HashMap<String, Vec<Knowledge>> = HashMap::new();
     for a in vec {
         println!("{}", a);
-        check_line(&a);
+        check_line(&a, &mut data);
     }
+    data
 }
 
 pub fn parse_line(line: &str, vec: &mut Vec<String>) {
@@ -85,65 +91,109 @@ pub fn parse_line(line: &str, vec: &mut Vec<String>) {
     }
 }
 
+pub fn get_symbol(char: char) -> String {
+    if !char.is_alphabetic() {
+        panic!("Invalid symbol: {}", char);
+    }
+    char.to_string().to_uppercase()
+}
+
 pub fn get_condition(operator: char) -> Condition {
     match operator {
         '|' => Condition::OR,
         '^' => Condition::XOR,
         '+' => Condition::AND,
-        _ => Condition::END,
+        '<' => Condition::END,
+        '=' => Condition::END,
+        _ => panic!("Invalid operator: {}", operator),
     }
 }
 
-pub fn check_line(line: &str) {
-    let chars: Vec<char> = line.chars().collect();
-
+pub fn get_requirement(
+    chars: &[char],
+    mut index: usize,
+) -> (std::vec::Vec<data_types::fact::Requirement>, usize) {
     let mut requirements: Vec<Requirement> = Vec::new();
     let operators: Vec<char> = vec!['|', '^', '+'];
-    let mut check_operator = false;
     let len = chars.len();
-    let mut index = 0;
-    while index < len {
+    while index < len
+        && (chars[index] == '!'
+            || chars[index].is_alphabetic()
+            || operators.contains(&chars[index]))
+    {
         let mut not = false;
-        let mut symbol = String::new();
-        let mut operator = ' ';
-        if chars[index] != '!'
-            && !chars[index].is_alphabetic()
-            && !operators.contains(&chars[index])
-        {
-            let end: String = chars[index..len].iter().collect();
-            println!("{} is the end rule", end);
-            break;
-        }
         if chars[index] == '!' {
             not = true;
             index += 1;
         }
-        if index < len && !check_operator && chars[index].is_alphabetic() {
-            symbol = chars[index].to_string();
-            print!("symbole :{} ", chars[index]);
-            index += 1;
-            check_operator = !check_operator;
-        }
-        if index < len && check_operator && operators.contains(&chars[index]) {
-            operator = chars[index];
-            print!("operator :{} ", chars[index]);
-            check_operator = !check_operator;
-            index += 1;
-        }
-        if symbol.is_empty() {
-            println!("Error");
-            break;
-        }
-        let requirement = Requirement::new(symbol, get_condition(operator), not);
+        let operator = if index + 1 < len {
+            chars[index + 1]
+        } else {
+            '='
+        };
+        let requirement = Requirement::new(get_symbol(chars[index]), get_condition(operator), not);
+        // println!("{:?}", requirement);
         requirements.push(requirement);
+        index += 2;
     }
+    (requirements, index)
+}
+
+pub fn add_to_data(
+    symbole: String,
+    knowledge: Knowledge,
+    data: &mut HashMap<String, Vec<Knowledge>>,
+) {
+    data.entry(symbole)
+        .and_modify(|v| v.push(knowledge.clone()))
+        .or_insert_with(|| vec![knowledge]);
+}
+
+pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>) {
+    let chars: Vec<char> = line.chars().collect();
+    let len = chars.len();
+    let mut index = 0;
+    if len > 1 && chars[0] == '=' && chars[1].is_alphabetic() {
+        println!("Fact");
+        return;
+    }
+    if len > 1 && chars[0] == '?' && chars[1].is_alphabetic() {
+        println!("Search");
+        return;
+    }
+    let (requirements, mut index) = get_requirement(&chars, index);
+    if index < len + 1 && chars[index - 1] == '=' && chars[index] == '>' {
+        let (results, _) = get_requirement(&chars, index + 1);
+        if !results.is_empty() && results[0].condition == Condition::END {
+            let knowledge = Knowledge::new(
+                results[0].symbol.clone(),
+                false,
+                requirements,
+                results[0].not,
+            );
+            println!("{:?}", knowledge);
+            add_to_data(chars[index + 1].to_string(), knowledge, data);
+        }
+        return;
+    }
+    if index + 1 < len && chars[index - 1] == '<' && chars[index] == '=' && chars[index + 1] == '>'
+    {
+        println!("Double");
+        return;
+    }
+    panic!("Invalid line3: {}", line);
 }
 
 pub fn parse_file(file_path: &str) {
-    // let mut data: HashMap<String, Vec<Knowledge>> = HashMap::new();
     match read_file(file_path) {
         Ok(lines) => {
-            pasre(lines);
+            let result = panic::catch_unwind(|| {
+                pasre(lines);
+            });
+
+            if let Err(err) = result {
+                println!("Caught a panic: {:?}", err);
+            }
         }
         Err(e) => {
             println!("Error reading file: {}", e);

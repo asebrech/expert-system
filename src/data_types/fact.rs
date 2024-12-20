@@ -1,8 +1,5 @@
-use std::{collections::HashMap, hash::RandomState, string};
-
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Condition {
-    START,
     AND,
     OR,
     XOR,
@@ -36,6 +33,7 @@ pub enum Condition {
 //=A
 //A => B ^ C
 
+#[derive(Clone, Debug)]
 pub struct Requirement {
     pub symbol: String,       //A => [!A, A, A, !A]
     pub condition: Condition, //   [false, true, true, false]
@@ -51,6 +49,16 @@ impl Requirement {
         }
     }
 }
+
+// impl fmt::Debug for Requirement {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(
+//             f,
+//             "{{ not: {}, symbol: {}, condition: {:?} }}",
+//             self.not, self.symbol, self.condition
+//         )
+//     }
+// }
 //=YB
 //Y => C
 //B <=> A | C + Y
@@ -62,12 +70,34 @@ impl Requirement {
 // combine B and A | C + Y et check si A existe
 //(B) + (A | C + Y) + A => A
 
+#[derive(Clone, Debug)]
 pub struct Knowledge {
     pub symbol: String, //(!(E + F) ^ G) => !A
     pub fact: bool,
     pub requirements: Vec<Requirement>, //E AND F
     pub not: bool,
 }
+
+impl Knowledge {
+    pub fn new(symbol: String, fact: bool, requirements: Vec<Requirement>, not: bool) -> Self {
+        Knowledge {
+            symbol,
+            fact,
+            requirements,
+            not,
+        }
+    }
+}
+
+// impl fmt::Debug for Knowledge {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(
+//             f,
+//             "{{ not: {}, symbol: {}, fact: {}, requirements: {:?} }}",
+//             self.not, self.symbol, self.fact, self.requirements
+//         )
+//     }
+// }
 
 //(E + F) not true
 //E AND F
@@ -77,4 +107,3 @@ pub struct Knowledge {
 //(!(E + F) ^ G)
 //
 //
-
