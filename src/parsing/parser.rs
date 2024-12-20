@@ -161,10 +161,13 @@ pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>) {
         println!("Search");
         return;
     }
-    let (requirements, mut index) = get_requirement(&chars, index);
+    let (mut requirements, mut index) = get_requirement(&chars, index);
     if index < len + 1 && chars[index - 1] == '=' && chars[index] == '>' {
         let (results, _) = get_requirement(&chars, index + 1);
-        if !results.is_empty() && results[0].condition == Condition::END {
+        if results.is_empty() {
+            panic!("Invalid line: {}", line);
+        }
+        if results[0].condition == Condition::END {
             let knowledge = Knowledge::new(
                 results[0].symbol.clone(),
                 false,
@@ -173,6 +176,26 @@ pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>) {
             );
             println!("{:?}", knowledge);
             add_to_data(chars[index + 1].to_string(), knowledge, data);
+        } else {
+            let results_clone = results.clone();
+            for result in results_clone {
+                let mut all_requirements = requirements.clone();
+                all_requirements.last_mut().unwrap().condition = Condition::AND;
+                let mut results_clone = results.clone();
+                results_clone.last_mut().unwrap().condition = Condition::AND;
+                let requirement =
+                    Requirement::new(result.symbol.clone(), Condition::END, result.not);
+                results_clone.push(requirement);
+                all_requirements.extend(results_clone);
+                let knowledge = Knowledge::new(
+                    result.symbol.clone(),
+                    false,
+                    all_requirements.clone(),
+                    result.not,
+                );
+                println!("{:?}", knowledge);
+                add_to_data(chars[index + 1].to_string(), knowledge, data);
+            }
         }
         return;
     }
