@@ -109,32 +109,79 @@ pub fn get_condition(operator: char) -> Condition {
     }
 }
 
+pub fn extract_parentheses_content(
+    chars: &[char],
+    start_index: usize,
+) -> (std::string::String, usize) {
+    let mut result = String::new();
+    let mut open_parens = 0;
+    let mut index = start_index;
+
+    while index < chars.len() {
+        let c = chars[index];
+        if c == '(' {
+            open_parens += 1;
+        } else if c == ')' {
+            open_parens -= 1;
+        }
+        result.push(c);
+        index += 1;
+        if open_parens == 0 {
+            break;
+        }
+    }
+
+    if open_parens != 0 {
+        panic!("Unmatched parentheses");
+    }
+
+    (result, index)
+}
+
+pub fn get_operator(chars: &[char], index: usize) -> char {
+    if index < chars.len() {
+        chars[index]
+    } else {
+        '='
+    }
+}
+
 pub fn get_requirement(
     chars: &[char],
     mut index: usize,
 ) -> (std::vec::Vec<data_types::fact::Requirement>, usize) {
     let mut requirements: Vec<Requirement> = Vec::new();
-    let operators: Vec<char> = vec!['|', '^', '+'];
+    let operators: Vec<char> = vec!['|', '^', '+', '(', ')'];
+    let syntax: Vec<char> = vec!['!', '(', ')'];
     let len = chars.len();
     while index < len
-        && (chars[index] == '!'
-            || chars[index].is_alphabetic()
-            || operators.contains(&chars[index]))
+        && (chars[index].is_alphabetic()
+            || operators.contains(&chars[index])
+            || syntax.contains(&chars[index]))
     {
         let mut not = false;
         if chars[index] == '!' {
             not = true;
             index += 1;
         }
-        let operator = if index + 1 < len {
-            chars[index + 1]
+        if chars[index] == '(' {
+            let (result, result_index) = extract_parentheses_content(chars, index);
+            let trim_result = result[1..result.len() - 1].to_string();
+            let line: Vec<char> = trim_result.chars().collect();
+            let (requirements_line, _) = get_requirement(&line, 0);
+            let knowledge = Knowledge::new(result.to_string(), false, requirements_line, false);
+            println!("{:?}", knowledge);
+            let operator = get_operator(chars, result_index);
+            let requirement = Requirement::new(result.to_string(), get_condition(operator), not);
+            requirements.push(requirement);
+            index = result_index + 1;
         } else {
-            '='
-        };
-        let requirement = Requirement::new(get_symbol(chars[index]), get_condition(operator), not);
-        // println!("{:?}", requirement);
-        requirements.push(requirement);
-        index += 2;
+            let operator = get_operator(chars, index + 1);
+            let requirement =
+                Requirement::new(get_symbol(chars[index]), get_condition(operator), not);
+            requirements.push(requirement);
+            index += 2;
+        }
     }
     (requirements, index)
 }
