@@ -144,9 +144,54 @@ pub fn add_to_data(
     knowledge: Knowledge,
     data: &mut HashMap<String, Vec<Knowledge>>,
 ) {
+    let symbole_clone = symbole.clone();
     data.entry(symbole)
         .and_modify(|v| v.push(knowledge.clone()))
         .or_insert_with(|| vec![knowledge]);
+    if let Some(knowledge) = data.get(&symbole_clone) {
+        println!("{:?}", knowledge);
+    } else {
+        println!("Symbol not found");
+    }
+}
+
+pub fn create_knowledge(
+    chars: &[char],
+    index: usize,
+    requirements: Vec<Requirement>,
+    data: &mut HashMap<String, Vec<Knowledge>>,
+) {
+    let (results, _) = get_requirement(chars, index + 1);
+    if results.is_empty() {
+        panic!("Invalid line");
+    }
+    if results[0].condition == Condition::END {
+        let knowledge = Knowledge::new(
+            results[0].symbol.clone(),
+            false,
+            requirements,
+            results[0].not,
+        );
+        add_to_data(results[0].symbol.clone(), knowledge, data);
+    } else {
+        let results_clone = results.clone();
+        for result in results_clone {
+            let mut all_requirements = requirements.clone();
+            all_requirements.last_mut().unwrap().condition = Condition::AND;
+            let mut results_clone = results.clone();
+            results_clone.last_mut().unwrap().condition = Condition::AND;
+            let requirement = Requirement::new(result.symbol.clone(), Condition::END, result.not);
+            results_clone.push(requirement);
+            all_requirements.extend(results_clone);
+            let knowledge = Knowledge::new(
+                result.symbol.clone(),
+                false,
+                all_requirements.clone(),
+                result.not,
+            );
+            add_to_data(result.symbol.clone(), knowledge, data);
+        }
+    }
 }
 
 pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>) {
@@ -163,45 +208,21 @@ pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>) {
     }
     let (mut requirements, mut index) = get_requirement(&chars, index);
     if index < len + 1 && chars[index - 1] == '=' && chars[index] == '>' {
-        let (results, _) = get_requirement(&chars, index + 1);
-        if results.is_empty() {
-            panic!("Invalid line: {}", line);
-        }
-        if results[0].condition == Condition::END {
-            let knowledge = Knowledge::new(
-                results[0].symbol.clone(),
-                false,
-                requirements,
-                results[0].not,
-            );
-            println!("{:?}", knowledge);
-            add_to_data(chars[index + 1].to_string(), knowledge, data);
-        } else {
-            let results_clone = results.clone();
-            for result in results_clone {
-                let mut all_requirements = requirements.clone();
-                all_requirements.last_mut().unwrap().condition = Condition::AND;
-                let mut results_clone = results.clone();
-                results_clone.last_mut().unwrap().condition = Condition::AND;
-                let requirement =
-                    Requirement::new(result.symbol.clone(), Condition::END, result.not);
-                results_clone.push(requirement);
-                all_requirements.extend(results_clone);
-                let knowledge = Knowledge::new(
-                    result.symbol.clone(),
-                    false,
-                    all_requirements.clone(),
-                    result.not,
-                );
-                println!("{:?}", knowledge);
-                add_to_data(chars[index + 1].to_string(), knowledge, data);
-            }
-        }
+        create_knowledge(&chars, index, requirements, data);
         return;
     }
     if index + 1 < len && chars[index - 1] == '<' && chars[index] == '=' && chars[index + 1] == '>'
     {
-        println!("Double");
+        create_knowledge(&chars, index + 1, requirements, data);
+        // let chars: Vec<char> = line.chars().collect();
+        let before = &chars[..index - 1];
+        let after = &chars[index + 2..];
+        let mut new_string = String::new();
+        new_string.push_str(&after.iter().collect::<String>());
+        new_string.push_str("=>");
+        new_string.push_str(&before.iter().collect::<String>());
+        println!("{}", new_string);
+        check_line(new_string.as_str(), data);
         return;
     }
     panic!("Invalid line3: {}", line);
