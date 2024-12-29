@@ -30,7 +30,27 @@
     Cree la knowledge avec symbol (A | B) et en requirement tu mets A OR B
     Ensuite tu fais juste knowledge E requirement (A | B) AND C
 
+    Y AND C ⇒ H OR U
+    This would mean: If Y AND C is true, then either H or U must be true,
+    but it doesn't restrict both H and U from being true. In fact,
+    H OR U would be true if either H is true, U is true, or both are true.
+    undetermined
 
+    For Y AND C ⇒ H XOR U, the logic is strict: exactly one of H or U must be true when Y AND C is true, but not both
+    Y AND C AND NOT H ⇒ U
+    Y AND C AND NOT U ⇒ H
+
+    Y AND C ⇒ H AND U
+    This rule states: If Y AND C are true, then both H and U must be true.
+    can rewrite Y AND C ⇒ H AND U as:
+    Y AND C ⇒ H
+    Y AND C ⇒ U
+
+
+    Y AND C ⇒ E AND (H XOR U)
+    Y AND C ⇒ E
+    Y AND C AND NOT H ⇒ U
+    Y AND C AND NOT U ⇒ H
 
 */
 
@@ -143,16 +163,15 @@ pub fn get_operator(chars: &[char], index: usize) -> char {
 pub fn get_requirement(
     chars: &[char],
     mut index: usize,
+    data: &mut HashMap<String, Vec<Knowledge>>,
 ) -> (std::vec::Vec<data_types::fact::Requirement>, usize) {
     let mut requirements: Vec<Requirement> = Vec::new();
-    let operators: Vec<char> = vec!['|', '^', '+', '(', ')'];
-    let syntax: Vec<char> = vec!['!', '(', ')'];
+    // let operators: Vec<char> = vec!['|', '^', '+', '(', '!'];
+    // let len = chars.len();
+    // while index < len && (chars[index].is_alphabetic() || chars[index] == '!') {
+    let syntax: Vec<char> = vec!['!', '('];
     let len = chars.len();
-    while index < len
-        && (chars[index].is_alphabetic()
-            || operators.contains(&chars[index])
-            || syntax.contains(&chars[index]))
-    {
+    while index < len && (chars[index].is_alphabetic() || syntax.contains(&chars[index])) {
         let mut not = false;
         if chars[index] == '!' {
             not = true;
@@ -162,9 +181,9 @@ pub fn get_requirement(
             let (result, result_index) = extract_parentheses_content(chars, index);
             let trim_result = result[1..result.len() - 1].to_string();
             let line: Vec<char> = trim_result.chars().collect();
-            let (requirements_line, _) = get_requirement(&line, 0);
+            let (requirements_line, _) = get_requirement(&line, 0, data);
             let knowledge = Knowledge::new(result.to_string(), false, requirements_line, false);
-            println!("{:?}", knowledge);
+            add_to_data(result.to_string(), knowledge, data);
             let operator = get_operator(chars, result_index);
             let requirement = Requirement::new(result.to_string(), get_condition(operator), not);
             requirements.push(requirement);
@@ -202,7 +221,7 @@ pub fn create_knowledge(
     requirements: Vec<Requirement>,
     data: &mut HashMap<String, Vec<Knowledge>>,
 ) {
-    let (results, _) = get_requirement(chars, index + 1);
+    let (results, _) = get_requirement(chars, index + 1, data);
     if results.is_empty() {
         panic!("Invalid line");
     }
@@ -247,7 +266,7 @@ pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>) {
         println!("Search");
         return;
     }
-    let (mut requirements, mut index) = get_requirement(&chars, index);
+    let (mut requirements, mut index) = get_requirement(&chars, index, data);
     if index < len + 1 && chars[index - 1] == '=' && chars[index] == '>' {
         create_knowledge(&chars, index, requirements, data);
         return;
