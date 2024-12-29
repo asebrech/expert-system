@@ -30,13 +30,7 @@
     Cree la knowledge avec symbol (A | B) et en requirement tu mets A OR B
     Ensuite tu fais juste knowledge E requirement (A | B) AND C
 
-    Y + C => (H + U)
 
-    A | B => (Y + C)
-    //
-    A | B + (Y + C) + Y => Y
-    A | B + (Y + C) + C => C
-    ?C
 
 */
 
