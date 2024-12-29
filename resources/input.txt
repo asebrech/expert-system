@@ -2,6 +2,9 @@
 # all the required rules and symbols, along with the bonus ones, will be
 # shown here. spacing is not important
 
+
+
+G + O => (X + Y) + A
 !((C + J )+ K) + V => E          # C implies E
 A + B + C => D  # A and B and C implies D
 A | B => C      # A or B implies C

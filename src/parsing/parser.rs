@@ -204,15 +204,26 @@ pub fn add_to_data(
     knowledge: Knowledge,
     data: &mut HashMap<String, Vec<Knowledge>>,
 ) {
+    println!("{:?}", knowledge);
     let symbole_clone = symbole.clone();
     data.entry(symbole)
         .and_modify(|v| v.push(knowledge.clone()))
         .or_insert_with(|| vec![knowledge]);
-    if let Some(knowledge) = data.get(&symbole_clone) {
-        println!("{:?}", knowledge);
-    } else {
-        println!("Symbol not found");
+    // if let Some(knowledge) = data.get(&symbole_clone) {
+    //     println!("{:?}", knowledge);
+    // } else {
+    //     println!("Symbol not found");
+    // }
+}
+
+pub fn create_chars_without_parentheses(chars: &[char], start_index: usize) -> Vec<char> {
+    let mut new_chars = Vec::new();
+    for &c in &chars[start_index..] {
+        if c != '(' && c != ')' {
+            new_chars.push(c);
+        }
     }
+    new_chars
 }
 
 pub fn create_knowledge(
@@ -222,27 +233,29 @@ pub fn create_knowledge(
     data: &mut HashMap<String, Vec<Knowledge>>,
 ) {
     let (results, _) = get_requirement(chars, index + 1, data);
+    let new_chars = create_chars_without_parentheses(chars, index + 1);
+    let (results_without, _) = get_requirement(&new_chars, 0, data);
     if results.is_empty() {
         panic!("Invalid line");
     }
-    if results[0].condition == Condition::END {
+    if results_without[0].condition == Condition::END {
         let knowledge = Knowledge::new(
-            results[0].symbol.clone(),
+            results_without[0].symbol.clone(),
             false,
             requirements,
-            results[0].not,
+            results_without[0].not,
         );
         add_to_data(results[0].symbol.clone(), knowledge, data);
     } else {
         let results_clone = results.clone();
-        for result in results_clone {
+        for result in results_without {
             let mut all_requirements = requirements.clone();
             all_requirements.last_mut().unwrap().condition = Condition::AND;
-            let mut results_clone = results.clone();
-            results_clone.last_mut().unwrap().condition = Condition::AND;
+            let mut results_clonee = results.clone();
+            results_clonee.last_mut().unwrap().condition = Condition::AND;
             let requirement = Requirement::new(result.symbol.clone(), Condition::END, result.not);
-            results_clone.push(requirement);
-            all_requirements.extend(results_clone);
+            results_clonee.push(requirement);
+            all_requirements.extend(results_clonee);
             let knowledge = Knowledge::new(
                 result.symbol.clone(),
                 false,
