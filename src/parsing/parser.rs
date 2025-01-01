@@ -75,12 +75,17 @@ pub fn create_knowledge(
     requirements: Vec<Requirement>,
     data: &mut HashMap<String, Vec<Knowledge>>,
 ) {
+    // Get the requirements from the characters starting after the implication operator
+    // This parses the right-hand side of the implication to determine the resulting conditions.
     let (results, _) = get_requirements(chars, index + 1, data);
-    let chars_without = chars_without_parentheses(chars, index + 1);
-    let (results_without, _) = get_requirements(&chars_without, 0, data);
     if results.is_empty() {
         panic!("Line missing result");
     }
+    // Remove parentheses from the characters and get the requirements again to handle nested conditions.
+    let chars_without = chars_without_parentheses(chars, index + 1);
+    let (results_without, _) = get_requirements(&chars_without, 0, data);
+
+    // If the first result has an END condition, create a new Knowledge instance and add it to the data
     if results_without[0].condition == Condition::END {
         let knowledge = Knowledge::new(
             results_without[0].symbol.clone(),
@@ -90,18 +95,24 @@ pub fn create_knowledge(
         );
         add_to_data(results[0].symbol.clone(), knowledge, data);
     } else {
+        // Otherwise, iterate through the results and create Knowledge instances for each
         for result_without in results_without {
+            // Clone the initial requirements and set the last condition to AND to ensure logical connection.
             let mut all_requirements = requirements.clone();
             all_requirements.last_mut().unwrap().condition = Condition::AND;
+            // Clone the results and set the last condition to AND to maintain consistency.
             let mut results_clone = results.clone();
             results_clone.last_mut().unwrap().condition = Condition::AND;
+            // Create a new requirement with the current result and END condition to mark it as final.
             let requirement = Requirement::new(
                 result_without.symbol.clone(),
                 Condition::END,
                 result_without.not,
             );
+            // Add the new requirement to the cloned results and extend the initial requirements with them.
             results_clone.push(requirement);
             all_requirements.extend(results_clone);
+            // Create a new Knowledge instance with the combined requirements to represent the logical relationship.
             let knowledge = Knowledge::new(
                 result_without.symbol.clone(),
                 false,
@@ -128,12 +139,17 @@ pub fn get_requirements(
             index += 1;
         }
         if chars[index] == '(' {
+            // Extract the content within the parentheses and the index after the closing parenthesis
             let (content, content_index) = parentheses_content(chars, index);
+            // Trim the parentheses from the content
             let trim_result = content[1..content.len() - 1].to_string();
             let line: Vec<char> = trim_result.chars().collect();
+            // Recursively get the requirements within the parentheses
             let (requirements_parentheses, _) = get_requirements(&line, 0, data);
+            // Create a new Knowledge instance with the content and its requirements
             let knowledge =
                 Knowledge::new(content.to_string(), false, requirements_parentheses, false);
+            // Add the new Knowledge instance to the data
             add_to_data(content.to_string(), knowledge, data);
             let operator = get_operator(chars, content_index);
             let requirement = Requirement::new(content.to_string(), get_condition(operator), not);
@@ -165,6 +181,8 @@ pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>, search
     let chars: Vec<char> = line.chars().collect();
     let len = chars.len();
     let mut index = 0;
+
+    // Check if the line defines initial facts (e.g., "=AB")
     if len > 1 && chars[0] == '=' && chars[1].is_alphabetic() {
         index += 1;
         while index < len && chars[1].is_alphabetic() {
@@ -177,27 +195,36 @@ pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>, search
         }
         return;
     }
+    // Check if the line defines a query (e.g., "?GVX")
     if len > 1 && chars[0] == '?' && chars[1].is_alphabetic() {
         *search = line.chars().skip(1).collect();
         return;
     }
+    // Parse the requirements from the line
     let (requirements, index) = get_requirements(&chars, index, data);
+    // Check if the line defines an implication (e.g., "A + B => C")
     if len > index && chars[index - 1] == '=' && chars[index] == '>' {
         create_knowledge(&chars, index, requirements, data);
         return;
     }
+    // Check if the line defines a biconditional (e.g., "A + B <=> C")
     if len > index + 1 && chars[index - 1] == '<' && chars[index] == '=' && chars[index + 1] == '>'
     {
+        // Create knowledge for the biconditional statement
         create_knowledge(&chars, index + 1, requirements, data);
+        // Split the characters into two parts: before and after the biconditional operator
         let before = &chars[..index - 1];
         let after = &chars[index + 2..];
+        // Construct a new string representing the reversed implication
         let mut new_string = String::new();
         new_string.push_str(&after.iter().collect::<String>());
         new_string.push_str("=>");
         new_string.push_str(&before.iter().collect::<String>());
+        // Recursively check the new string to handle the reversed implication
         check_line(new_string.as_str(), data, search);
         return;
     }
+    // If the line does not match any valid format, panic
     panic!("Invalid line: {}", line);
 }
 
