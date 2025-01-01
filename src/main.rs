@@ -4,6 +4,8 @@ mod engine;
 mod parsing;
 mod test;
 use data_types::fact::*;
+use dotenv::dotenv;
+use env_logger::Env;
 use parsing::parser::parse_file;
 
 // use engine::solver::solver::init;
@@ -78,6 +80,18 @@ use parsing::parser::parse_file;
 */
 
 fn main() {
+    dotenv().ok();
+    // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
+    env_logger::init_from_env(Env::default().default_filter_or("debug"));
+
+    let file_path = "resources/input.txt";
+    let Some((data, search)) = parse_file(file_path) else {
+        todo!()
+    };
+
+    println!("Facts to resolve : {:?}", search);
+    // println!("{:?}", data);
+
     /*let mut ke: KnowledgeEngine = KnowledgeEngine {
             data: HashMap::new()
         };
@@ -128,9 +142,4 @@ fn main() {
         test();
 
     */
-    //prove("C".into(), &ke);
-    // test();
-
-    let file_path = "resources/input.txt";
-    parse_file(file_path);
 }
