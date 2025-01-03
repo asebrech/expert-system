@@ -238,7 +238,7 @@ pub fn check_line(
     // Check if the line defines a query (e.g., "?GVX")
     if len > 1 && chars[0] == '?' && chars[1].is_alphabetic() {
         let res = check_search(&chars, len, index + 1);
-        println!("{:?}", res);
+        debug!("{:?}", res);
         let (results, _) = get_requirements(&res, 0, data);
         search.extend(results);
         return;
@@ -316,12 +316,10 @@ pub fn read_file(file_path: &str) -> io::Result<Vec<String>> {
     Ok(lines)
 }
 
-pub fn parse_file(
-    file_path: &str,
-) -> Option<(
-    std::collections::HashMap<std::string::String, std::vec::Vec<data_types::fact::Knowledge>>,
-    String,
-)> {
+type KnowledgeMap = std::collections::HashMap<String, Vec<data_types::fact::Knowledge>>;
+type RequirementVec = Vec<Requirement>;
+
+pub fn parse_file(file_path: &str) -> Option<(KnowledgeMap, RequirementVec)> {
     match read_file(file_path) {
         Ok(lines) => {
             let result = panic::catch_unwind(|| parse_lines(lines));
