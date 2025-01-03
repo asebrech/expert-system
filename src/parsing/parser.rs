@@ -7,6 +7,42 @@ use std::path::Path;
 
 use crate::{data_types, Condition, Knowledge, Requirement};
 
+pub fn check_search(chars: &[char], len: usize, start_index: usize) -> Vec<char> {
+    let mut result = Vec::new();
+    let mut i = start_index;
+
+    while i < len {
+        let c = chars[i];
+        if c == '(' {
+            let mut open_parens = 1;
+            let mut j = i + 1;
+            while j < len && open_parens > 0 {
+                if chars[j] == '(' {
+                    open_parens += 1;
+                } else if chars[j] == ')' {
+                    open_parens -= 1;
+                }
+                j += 1;
+            }
+            if open_parens != 0 {
+                panic!("Unmatched parentheses in search line: {:?}", chars);
+            }
+            result.extend(&chars[i..j]);
+            if j < len {
+                result.push('+');
+            }
+            i = j;
+        } else {
+            result.push(c);
+            if i < len - 1 {
+                result.push('+');
+            }
+        }
+        i += 1;
+    }
+    result
+}
+
 pub fn chars_without_parentheses(chars: &[char], start_index: usize) -> Vec<char> {
     let mut new_chars = Vec::new();
     for &c in &chars[start_index..] {
@@ -177,7 +213,11 @@ pub fn add_to_data(
         .or_insert_with(|| vec![knowledge]);
 }
 
-pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>, search: &mut String) {
+pub fn check_line(
+    line: &str,
+    data: &mut HashMap<String, Vec<Knowledge>>,
+    search: &mut Vec<Requirement>,
+) {
     let chars: Vec<char> = line.chars().collect();
     let len = chars.len();
     let mut index = 0;
@@ -197,7 +237,10 @@ pub fn check_line(line: &str, data: &mut HashMap<String, Vec<Knowledge>>, search
     }
     // Check if the line defines a query (e.g., "?GVX")
     if len > 1 && chars[0] == '?' && chars[1].is_alphabetic() {
-        *search = line.chars().skip(1).collect();
+        let res = check_search(&chars, len, index + 1);
+        println!("{:?}", res);
+        let (results, _) = get_requirements(&res, 0, data);
+        search.extend(results);
         return;
     }
     // Parse the requirements from the line
@@ -246,14 +289,14 @@ pub fn parse_lines(
     lines: Vec<String>,
 ) -> (
     std::collections::HashMap<std::string::String, std::vec::Vec<data_types::fact::Knowledge>>,
-    String,
+    Vec<Requirement>,
 ) {
     let mut vec: Vec<String> = Vec::new();
     for line in lines {
         clean_line(&line, &mut vec);
     }
     let mut data: HashMap<String, Vec<Knowledge>> = HashMap::new();
-    let mut search: String = String::new();
+    let mut search: Vec<Requirement> = Vec::new();
     for a in vec {
         debug!("Line : {}", a);
         check_line(&a, &mut data, &mut search);
