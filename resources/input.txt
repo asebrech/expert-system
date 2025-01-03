@@ -21,4 +21,4 @@ G + O => (X + Y) + A
                 # If no facts are initially true, then a simple "=" followed
                 # by a newline is used
 
-?GVX            # Queries : What are G, V and X ?
+?X            # Queries : What are G, V and X ?
