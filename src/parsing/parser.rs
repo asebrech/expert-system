@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-use crate::{data_types, Condition, Knowledge, Requirement};
+use crate::{Condition, Knowledge, Requirement};
 
 pub fn chars_without_parentheses(chars: &[char], start_index: usize) -> Vec<char> {
     let mut new_chars = Vec::new();

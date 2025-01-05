@@ -96,6 +96,7 @@ fn main() {
         );
         return;
     }
+
     let file_path = "resources/input.txt";
 
     let lines = read_file(file_path).unwrap_or_else(|e| {
