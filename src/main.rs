@@ -3,13 +3,15 @@ mod data_types;
 mod engine;
 mod parsing;
 mod test;
-use std::env;
-
 use data_types::fact::*;
 use dotenv::dotenv;
 use engine::solver::solver::{prove, KnowledgeEngine};
 use env_logger::Env;
-use parsing::parser::parse_file;
+use parsing::parser::parse_lines;
+use std::collections::HashMap;
+use std::env;
+
+use crate::parsing::parser::read_file;
 
 // use engine::solver::solver::init;
 // use parsing::parser::*;
@@ -86,28 +88,44 @@ fn main() {
     dotenv().ok();
     // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
-    let expert_mode = env::var("EXPERT_MODE")
-        .expect("Expert mode must be set");
+    let expert_mode = env::var("EXPERT_MODE").expect("Expert mode must be set");
     if expert_mode != "true" && expert_mode != "false" {
-        println!("EXPORT_MODE need to be either true or false, it is {}.", expert_mode);
+        println!(
+            "EXPORT_MODE need to be either true or false, it is {}.",
+            expert_mode
+        );
         return;
     }
     let file_path = "resources/input.txt";
-    let Some((data, search)) = parse_file(file_path) else {
-        todo!()
-    };
-    //(A + B)
+
+    let lines = read_file(file_path).unwrap_or_else(|e| {
+        println!("Error reading file: {}", e);
+        std::process::exit(1);
+    });
+
+    let mut data = HashMap::new();
+    let mut search = Vec::new();
+
+    parse_lines(lines, &mut data, &mut search).unwrap_or_else(|e| {
+        println!("Error parsing file: {}", e);
+        std::process::exit(1);
+    });
+
     let mut ke = KnowledgeEngine {
         data,
-        expert_mode: expert_mode == "true"
+        expert_mode: expert_mode == "true",
     };
 
-    println!("Facts to resolve : {:?}", search);
-    println!("{:?}", ke.data);
-    println!(
-        "solving {} = {}", search.to_string(), 
-        prove(search, &mut ke).map_or("undetermined".to_string(), |v| v.to_string())
-    );
+    // println!("Facts to resolve : {:?}", search);
+    // println!("{:?}", ke.data);
+    for element in &search {
+        println!(
+            "solving {:?} = {}\n",
+            element,
+            prove(element.to_string(), &mut ke)
+                .map_or("undetermined".to_string(), |v| v.to_string())
+        );
+    }
 
     /*let mut ke: KnowledgeEngine = KnowledgeEngine {
             data: HashMap::new()
