@@ -187,6 +187,7 @@ pub fn check_line(
     if len > 1 && chars[0] == '?' && chars[1].is_alphabetic() {
         let query_chars: Vec<char> = chars[1..].to_vec();
         if query_chars.iter().all(|&c| c.is_alphabetic()) {
+            debug!("{:?}", query_chars);
             search.extend(query_chars);
         } else {
             return Err(format!("Invalid query line: {}", line));
