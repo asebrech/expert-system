@@ -3,10 +3,15 @@ mod data_types;
 mod engine;
 mod parsing;
 mod test;
+
+use std::collections::HashMap;
+
 use data_types::fact::*;
 use dotenv::dotenv;
 use env_logger::Env;
-use parsing::parser::parse_file;
+use parsing::parser::parse_lines;
+
+use crate::parsing::parser::read_file;
 
 // use engine::solver::solver::init;
 // use parsing::parser::*;
@@ -85,12 +90,22 @@ fn main() {
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
 
     let file_path = "resources/input.txt";
-    let Some((data, search)) = parse_file(file_path) else {
-        todo!()
-    };
+
+    let lines = read_file(file_path).unwrap_or_else(|e| {
+        println!("Error reading file: {}", e);
+        std::process::exit(1);
+    });
+
+    let mut data = HashMap::new();
+    let mut search = Vec::new();
+
+    parse_lines(lines, &mut data, &mut search).unwrap_or_else(|e| {
+        println!("Error parsing file: {}", e);
+        std::process::exit(1);
+    });
 
     println!("Facts to resolve : {:?}", search);
-    // println!("{:?}", data);
+    println!("{:?}", data);
 
     /*let mut ke: KnowledgeEngine = KnowledgeEngine {
             data: HashMap::new()
