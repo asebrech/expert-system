@@ -28,15 +28,17 @@ impl Requirement {
 pub struct Knowledge {
     pub symbol: String,
     pub fact: bool,
+    pub calcul: String,
     pub requirements: Vec<Requirement>,
     pub not: bool,
 }
 
 impl Knowledge {
-    pub fn new(symbol: String, fact: bool, requirements: Vec<Requirement>, not: bool) -> Self {
+    pub fn new(symbol: String, fact: bool, calcul: String, requirements: Vec<Requirement>, not: bool) -> Self {
         Knowledge {
             symbol,
             fact,
+            calcul,
             requirements,
             not,
         }

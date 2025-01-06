@@ -73,6 +73,7 @@ pub fn create_knowledge(
     index: usize,
     requirements: Vec<Requirement>,
     data: &mut HashMap<String, Vec<Knowledge>>,
+    line: &str
 ) -> Result<(), String> {
     let (results, _) = get_requirements(chars, index + 1, data)?;
     if results.is_empty() {
@@ -85,6 +86,7 @@ pub fn create_knowledge(
         let knowledge = Knowledge::new(
             results_without[0].symbol.clone(),
             false,
+            line.to_string(),
             requirements,
             results_without[0].not,
         );
@@ -105,6 +107,7 @@ pub fn create_knowledge(
             let knowledge = Knowledge::new(
                 result_without.symbol.clone(),
                 false,
+                line.to_string(),
                 all_requirements.clone(),
                 result_without.not,
             );
@@ -134,7 +137,7 @@ pub fn get_requirements(
             let line: Vec<char> = trim_result.chars().collect();
             let (requirements_parentheses, _) = get_requirements(&line, 0, data)?;
             let knowledge =
-                Knowledge::new(content.to_string(), false, requirements_parentheses, false);
+                Knowledge::new(content.to_string(), false, "TODO".to_string(),requirements_parentheses, false);
             add_to_data(content.to_string(), knowledge, data);
             let operator = get_operator(chars, content_index);
             let requirement = Requirement::new(content.to_string(), get_condition(operator)?, not);
@@ -174,7 +177,7 @@ pub fn check_line(
     if len > 1 && chars[0] == '=' && chars[1].is_alphabetic() {
         index += 1;
         while index < len && chars[index].is_alphabetic() {
-            let knowledge = Knowledge::new(chars[index].to_string(), true, Vec::new(), false);
+            let knowledge = Knowledge::new(chars[index].to_string(), true, line.to_string(), Vec::new(), false);
             add_to_data(chars[index].to_string(), knowledge, data);
             index += 1;
         }
@@ -197,7 +200,7 @@ pub fn check_line(
 
     let (requirements, index) = get_requirements(&chars, index, data)?;
     if len > index && index > 0 && chars[index - 1] == '=' && chars[index] == '>' {
-        create_knowledge(&chars, index, requirements, data)?;
+        create_knowledge(&chars, index, requirements, data, line)?;
         return Ok(());
     }
 
@@ -207,7 +210,7 @@ pub fn check_line(
         && chars[index] == '='
         && chars[index + 1] == '>'
     {
-        create_knowledge(&chars, index + 1, requirements, data)?;
+        create_knowledge(&chars, index + 1, requirements, data, line)?;
         let before = &chars[..index - 1];
         let after = &chars[index + 2..];
         let mut new_string = String::new();
@@ -229,6 +232,7 @@ pub fn clean_line(line: &str, vec: &mut Vec<String>) {
             result.push(c);
         }
     }
+    println!("{}", result);
     if !result.is_empty() {
         vec.push(result);
     }

@@ -114,6 +114,7 @@ fn main() {
 
     let mut ke = KnowledgeEngine {
         data,
+        resolved_data: HashMap::new(),
         expert_mode: expert_mode == "true",
     };
 
