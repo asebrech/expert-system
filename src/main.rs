@@ -5,7 +5,7 @@ mod parsing;
 mod test;
 use data_types::fact::*;
 use dotenv::dotenv;
-use engine::solver::solver::{prove, KnowledgeEngine};
+use engine::solver::solver::{prove, KnowledgeCacheManager, KnowledgeEngine};
 use env_logger::Env;
 use parsing::parser::parse_lines;
 use std::collections::HashMap;
@@ -97,7 +97,7 @@ fn main() {
         return;
     }
 
-    let file_path = "resources/input.txt";
+    let file_path = "resources/recursion.txt";
 
     let lines = read_file(file_path).unwrap_or_else(|e| {
         println!("Error reading file: {}", e);
@@ -114,69 +114,22 @@ fn main() {
 
     let mut ke = KnowledgeEngine {
         data,
-        resolved_data: HashMap::new(),
+        current_symbol: None,
         expert_mode: expert_mode == "true",
     };
 
     // println!("Facts to resolve : {:?}", search);
     // println!("{:?}", ke.data);
-    for element in &search {
+    let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
+        resolved_data: HashMap::new()
+    };
+   for element in &search {
+    ke.current_symbol = Some(element.to_string());
         println!(
             "solving {:?} = {}\n",
             element,
-            prove(element.to_string(), &mut ke)
+            prove(element.to_string(), &mut ke, &mut knowledge_cache_manager)
                 .map_or("undetermined".to_string(), |v| v.to_string())
         );
     }
-
-    /*let mut ke: KnowledgeEngine = KnowledgeEngine {
-            data: HashMap::new()
-        };
-        let symbol_a: &str = "A".into();
-        let knowledge_a: Knowledge = Knowledge {
-            symbol: symbol_a,
-            fact: true,
-            requirements: Vec::new()
-        };
-
-        let symbol_b: &str = "B".into();
-        let knowledge_b: Knowledge = Knowledge {
-            symbol: symbol_b,
-            fact: true,
-            requirements: Vec::new()
-        };
-        let vecB = Vec::new();
-        vecB.push(&knowledge_b);
-        ke.data.insert(symbol_b, vecB);
-
-        let goal_one = Requirement {
-            knowledge: &knowledge_a,
-            condition: Condition::AND,
-            should_exist: true,
-        };
-
-        let goal_two = Requirement {
-            knowledge: &knowledge_b,
-            condition: Condition::END,
-            should_exist: true,
-        };
-
-        ke.data.insert(symbol_a, &knowledge_a);
-
-        let symbol_c: &str = "C".into();
-        let mut knowledge_c: Knowledge = Knowledge {
-            symbol: symbol_c,
-            fact: false,
-            requirements: Vec::new()
-        };
-
-        knowledge_c.requirements.push(goal_one);
-        knowledge_c.requirements.push(goal_two);
-
-        ke.data.insert(symbol_c, &knowledge_c);
-
-        prove("C".into(),&ke);
-        test();
-
-    */
 }

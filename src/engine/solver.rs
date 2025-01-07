@@ -1,18 +1,22 @@
 pub mod solver {
 
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     use crate::{data_types, Condition, Requirement};
 
     pub struct KnowledgeEngine {
         pub data:  std::collections::HashMap<std::string::String, std::vec::Vec<data_types::fact::Knowledge>>, //Need to put vector as we can have several rule for one knowledge
-        pub resolved_data: HashMap<String, Option<bool>>, //map formula to a boolean
+        pub current_symbol: Option<String>,
         pub expert_mode: bool,
     }
 
-    pub fn prove(symbol: String, engine: &mut KnowledgeEngine) -> Option<bool> {
-        let mut symbol_met: Vec<String> = Vec::new();
-        return get_knowledge_state(&symbol, engine, &mut symbol_met, 0);
+    pub struct KnowledgeCacheManager {
+        pub resolved_data: HashMap<String, Option<bool>> //keeps track of resolved formulas
+    }
+
+    pub fn prove(symbol: String, engine: &mut KnowledgeEngine, knowledge_cache_manager: &mut KnowledgeCacheManager) -> Option<bool> {
+        let mut symbol_met: HashSet<String> = HashSet::new();
+        return get_knowledge_state(&symbol, engine, &mut symbol_met, knowledge_cache_manager, 0);
     }
 
     //check if given knowledge is true, false or none (undetermined)
@@ -22,7 +26,8 @@ pub mod solver {
     fn get_knowledge_state(
         symbol: &str,
         engine: &KnowledgeEngine,
-        symbol_met: &mut Vec<String>,
+        symbol_met: &mut HashSet<String>,
+        knowledge_cache_manager: &mut KnowledgeCacheManager,
         mut depth: usize,
     ) -> Option<bool> {
         let knowledge_vec = engine.data.get(symbol);
@@ -31,20 +36,19 @@ pub mod solver {
             println!("{}Recursion found for symbol: {}", "\t".repeat(depth), symbol);
             return None;
         }
-        symbol_met.push(symbol.to_string());
         depth += 1;
         if knowledge_vec.is_none() {
             return None;
         }
 
-        let ke_vec = knowledge_vec.unwrap();
-        if ke_vec.len() == 0 {
+        let knowledge_vec = knowledge_vec.unwrap();
+        if knowledge_vec.len() == 0 {
             println!("{}No requirement for {}",  "\t".repeat(depth), symbol);
             return None;
         }
 
         //if ke_vec is a fact, it is stored up front
-        for ele in ke_vec {
+        for ele in knowledge_vec {
             if ele.fact {
                 println!(
                     "{}{}{} is a fact that is {}",
@@ -56,17 +60,25 @@ pub mod solver {
                 return Some(ele.fact && !ele.not);
             }
         }
+        symbol_met.insert(symbol.to_string());
 
-        println!("{}Processing all knowledge of {}, total: {}", "\t".repeat(depth), symbol, ke_vec.len());
-        for knowledge in ke_vec.iter() {
-            println!("{}Checking formula: {}", "\t".repeat(depth), knowledge.calcul);
-
-            let are_req_met = are_requirements_met(&knowledge.requirements, engine, symbol_met, depth);
+        println!("{}Processing all knowledge of {}, total: {}", "\t".repeat(depth), symbol, knowledge_vec.len());
+        for knowledge in knowledge_vec.iter() {
+            println!("{}Checking formula: {} for {}", "\t".repeat(depth), knowledge.calcul, symbol);
+            let are_req_met: Option<bool>;
+            if let Some(temp) = knowledge_cache_manager.resolved_data.get(&knowledge.calcul) {
+                are_req_met = *temp;
+                println!("Cached data found for {} => {:?}", knowledge.calcul, temp.map_or("undetermined".to_string(), |v| v.to_string()));
+            } else {
+                are_req_met = are_requirements_met(&knowledge.requirements, engine, symbol_met, knowledge_cache_manager, depth);
+            }
             //cas not C is true
             if let Some(are_req_met) = are_req_met {
                 //si le req est false, et que la knowledge veux que sa n existe pas
                 if are_req_met == false && knowledge.not {
                     println!("True 1");
+                    knowledge_cache_manager.resolved_data.insert(knowledge.calcul.clone(), Some(true));
+                    symbol_met.remove(symbol);
                     return Some(true);
                 }
 
@@ -75,24 +87,29 @@ pub mod solver {
                 } else {
                     println!("{}{} is {}","\t".repeat(depth),  knowledge.symbol, are_req_met);
                     if are_req_met == false {
-                        println!("False one");
+                        println!("XXFalse one");
+                        knowledge_cache_manager.resolved_data.insert(knowledge.calcul.clone(), Some(false));
+                        symbol_met.remove(symbol);
                         return Some(false);
                     }
                 }
             } else {
                 //println!("{}Default none", "\t".repeat(depth));
+                knowledge_cache_manager.resolved_data.insert(knowledge.calcul.clone(), None);
                 return None;
             }
             println!("{}------------------------------------------------", "\t".repeat(depth));
         }
+        println!("Symbol met {:?}", symbol_met);
         Some(true)
     }
 
     fn are_requirements_met(
         requirements: &Vec<Requirement>,
         brain: &KnowledgeEngine,
-        symbol_met: &mut Vec<String>,
-        mut depth: usize,
+        symbol_met: &mut HashSet<String>,
+        knowledge_cache_manager: &mut KnowledgeCacheManager,
+        depth: usize,
     ) -> Option<bool> {
         //init with the first requirement
         let first_req = requirements.first().unwrap();
@@ -108,7 +125,7 @@ pub mod solver {
             Condition::XOR => false,
         };
         let mut last_result =
-            match_requirement(first_req, brain, first_req.condition, initial_last_res, false, symbol_met, depth);
+            match_requirement(first_req, brain, first_req.condition, initial_last_res, false, symbol_met, knowledge_cache_manager, depth);
         if last_result.is_none() || last_result.unwrap() == false {
            // println!("{}First requirement arent met","\t".repeat(depth));
             return None;
@@ -127,6 +144,7 @@ pub mod solver {
                 last_result.unwrap(),
                 requirement.condition == last_condition,
                 symbol_met,
+                knowledge_cache_manager,
                 depth + 1,
             );
             if last_result.is_none() || last_result.unwrap() == false {
@@ -145,12 +163,13 @@ pub mod solver {
         condition: Condition,
         last_result: bool,
         same_condition: bool,
-        symbol_met: &mut Vec<String>,
+        symbol_met: &mut HashSet<String>,
+        knowledge_cache_manager: &mut KnowledgeCacheManager,
         depth: usize,
     ) -> Option<bool> {
-        let current_knowledge_truthy = get_knowledge_state(&current.symbol, brain, symbol_met, depth);
-
-    let mut current_knowledge = false;
+        let current_knowledge_truthy = get_knowledge_state(&current.symbol, brain, symbol_met, knowledge_cache_manager, depth);
+        symbol_met.remove(&current.symbol);
+        let mut current_knowledge = false;
         if brain.expert_mode == true {
             if current_knowledge_truthy.is_none() {
                 println!("{}{} is undetermined","\t".repeat(depth),  current.symbol, );
