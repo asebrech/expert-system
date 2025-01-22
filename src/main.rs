@@ -9,7 +9,6 @@ use engine::solver::solver::{prove, KnowledgeCacheManager, KnowledgeEngine};
 use env_logger::Env;
 use parsing::parser::parse_lines;
 use std::collections::HashMap;
-use std::env;
 
 use crate::parsing::parser::read_file;
 
@@ -88,16 +87,8 @@ fn main() {
     dotenv().ok();
     // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
-    let expert_mode = env::var("EXPERT_MODE").expect("Expert mode must be set");
-    if expert_mode != "true" && expert_mode != "false" {
-        println!(
-            "EXPORT_MODE need to be either true or false, it is {}.",
-            expert_mode
-        );
-        return;
-    }
 
-    let file_path = "resources/recursion.txt";
+    let file_path = "resources/input.txt";
 
     let lines = read_file(file_path).unwrap_or_else(|e| {
         println!("Error reading file: {}", e);
@@ -114,8 +105,7 @@ fn main() {
 
     let mut ke = KnowledgeEngine {
         data,
-        current_symbol: None,
-        expert_mode: expert_mode == "true",
+        current_symbol: None
     };
 
     // println!("Facts to resolve : {:?}", search);

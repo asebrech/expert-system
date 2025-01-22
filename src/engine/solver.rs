@@ -7,7 +7,6 @@ pub mod solver {
     pub struct KnowledgeEngine {
         pub data:  std::collections::HashMap<std::string::String, std::vec::Vec<data_types::fact::Knowledge>>, //Need to put vector as we can have several rule for one knowledge
         pub current_symbol: Option<String>,
-        pub expert_mode: bool,
     }
 
     pub struct KnowledgeCacheManager {
@@ -38,13 +37,14 @@ pub mod solver {
         }
         depth += 1;
         if knowledge_vec.is_none() {
-            return None;
+			println!("Sarutax {}", symbol);
+            return Some(false);
         }
 
         let knowledge_vec = knowledge_vec.unwrap();
         if knowledge_vec.len() == 0 {
             println!("{}No requirement for {}",  "\t".repeat(depth), symbol);
-            return None;
+            return Some(false);
         }
 
         //if ke_vec is a fact, it is stored up front
@@ -70,8 +70,9 @@ pub mod solver {
                 are_req_met = *temp;
                 println!("Cached data found for {} => {:?}", knowledge.calcul, temp.map_or("undetermined".to_string(), |v| v.to_string()));
             } else {
-                are_req_met = are_requirements_met(&knowledge.requirements, engine, symbol_met, knowledge_cache_manager, depth);
-            }
+                //are_req_met = are_requirements_met(&knowledge.requirements, engine, symbol_met, knowledge_cache_manager, depth);
+				are_req_met = process_formula(&knowledge.requirements, engine, symbol_met, knowledge_cache_manager, depth);
+			}
             //cas not C is true
             if let Some(are_req_met) = are_req_met {
                 //si le req est false, et que la knowledge veux que sa n existe pas
@@ -104,128 +105,48 @@ pub mod solver {
         Some(true)
     }
 
-    fn are_requirements_met(
+	fn process_formula(
         requirements: &Vec<Requirement>,
         brain: &KnowledgeEngine,
         symbol_met: &mut HashSet<String>,
         knowledge_cache_manager: &mut KnowledgeCacheManager,
         depth: usize,
     ) -> Option<bool> {
-        //init with the first requirement
-        let first_req = requirements.first().unwrap();
+		let first_req = requirements.get(0).unwrap();
+		if requirements.len() <= 1 {
+			return get_knowledge_state(&first_req.symbol, brain, symbol_met, knowledge_cache_manager, depth);
+		}
+		let second_req = requirements.get(1).unwrap();
+		let mut previous = second_req;
+		let lhs = get_knowledge_state(&first_req.symbol, brain, symbol_met, knowledge_cache_manager, depth);
+		let mut rhs = get_knowledge_state(&second_req.symbol, brain, symbol_met, knowledge_cache_manager, depth);
+		if lhs.is_none() || rhs.is_none() {
+			return None;
+		}
+		let mut lhs = compare_boolean(lhs.unwrap(), rhs.unwrap(), first_req.condition);
+		if requirements.len() == 2 {
+			return Some(lhs);
+		}
+		let to_iter = requirements.iter().skip(2);
+		for item in to_iter {
+			
+			rhs = get_knowledge_state(&item.symbol, brain, symbol_met, knowledge_cache_manager, depth);
+			if rhs.is_none() {
+				return None;
+			}
+			lhs = compare_boolean(lhs, rhs.unwrap(), previous.condition);
+			previous = item;
+		}
 
-        //skip first element, then iter on every others
-        let requirement_iter = requirements.iter().skip(1);
-        //will have problem here with the first one
-        let mut last_condition = first_req.condition;
-        let initial_last_res = match first_req.condition {
-            Condition::AND => true,
-            Condition::END => true,
-            Condition::OR => false,
-            Condition::XOR => false,
-        };
-        let mut last_result =
-            match_requirement(first_req, brain, first_req.condition, initial_last_res, false, symbol_met, knowledge_cache_manager, depth);
-        if last_result.is_none() || last_result.unwrap() == false {
-           // println!("{}First requirement arent met","\t".repeat(depth));
-            return None;
-        }
-        for requirement in requirement_iter {
-            if brain.expert_mode == false {
-                if requirement.condition == Condition::OR {
-                    return None;
-                }
-            }
-
-            last_result = match_requirement(
-                requirement,
-                brain,
-                requirement.condition,
-                last_result.unwrap(),
-                requirement.condition == last_condition,
-                symbol_met,
-                knowledge_cache_manager,
-                depth + 1,
-            );
-            if last_result.is_none() || last_result.unwrap() == false {
-                println!("{}Requirement failed to be satisfied","\t".repeat(depth));
-                return None;
-            }
-            last_condition = requirement.condition;
-        }
-
-        Some(true)
+        Some(lhs)
     }
 
-    fn match_requirement(
-        current: &Requirement,
-        brain: &KnowledgeEngine,
-        condition: Condition,
-        last_result: bool,
-        same_condition: bool,
-        symbol_met: &mut HashSet<String>,
-        knowledge_cache_manager: &mut KnowledgeCacheManager,
-        depth: usize,
-    ) -> Option<bool> {
-        let knowledge_exists = brain.data.get(&current.symbol);
-        let current_knowledge_truthy = get_knowledge_state(&current.symbol, brain, symbol_met, knowledge_cache_manager, depth);
-        symbol_met.remove(&current.symbol);
-        let mut current_knowledge = false;
-
-        if current_knowledge_truthy.is_none() {
-            if knowledge_exists.is_some() {
-                println!("{}{} is undetermined","\t".repeat(depth),  current.symbol, );
-                return None;
-            }
-            current_knowledge = current_knowledge_truthy.unwrap_or(false);
+	fn compare_boolean(lhs: bool, rhs: bool, condition: Condition) -> bool {
+        return match condition {
+            Condition::AND => lhs && rhs,
+            Condition::OR => lhs || rhs,
+            Condition::XOR => lhs != rhs,
+            _ => rhs
         }
-
-        /*if brain.expert_mode == true {
-            if current_knowledge_truthy.is_none() {
-                println!("{}{} is undetermined","\t".repeat(depth),  current.symbol, );
-                return None;
-            }
-            current_knowledge = current_knowledge_truthy.unwrap();
-        } else if brain.expert_mode == false {
-            current_knowledge = current_knowledge_truthy.unwrap_or(false)
-        }*/
-        /**/
-        match condition {
-            Condition::AND => {
-                if current_knowledge == false || last_result == false {
-                    return Some(false);
-                }
-            }
-            Condition::OR => {
-                if last_result == false
-                    && current_knowledge == false
-                    && same_condition == true
-                {
-                    return Some(false);
-                }
-            }
-            Condition::XOR => {
-                if current_knowledge == false && last_result == false || 
-                last_result == true && current_knowledge == true {
-                    return Some(false);
-                }
-            }
-            _ => {
-                return Some(last_result);
-            }
-        }
-        Some(true)
-    }
-
-
-
-
-
-
-
-
-
-
-
-
+	}
 }
