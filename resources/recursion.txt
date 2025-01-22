@@ -1,7 +1,7 @@
 
 
 
-A + Y => B
+X | W | G => B
 B => C
 C => D
 D => A
@@ -9,5 +9,5 @@ D => A
 Y => G
 G => V
 V => Y
-
+=W
 ?A

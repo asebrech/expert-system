@@ -167,10 +167,20 @@ pub mod solver {
         knowledge_cache_manager: &mut KnowledgeCacheManager,
         depth: usize,
     ) -> Option<bool> {
+        let knowledge_exists = brain.data.get(&current.symbol);
         let current_knowledge_truthy = get_knowledge_state(&current.symbol, brain, symbol_met, knowledge_cache_manager, depth);
         symbol_met.remove(&current.symbol);
         let mut current_knowledge = false;
-        if brain.expert_mode == true {
+
+        if current_knowledge_truthy.is_none() {
+            if knowledge_exists.is_some() {
+                println!("{}{} is undetermined","\t".repeat(depth),  current.symbol, );
+                return None;
+            }
+            current_knowledge = current_knowledge_truthy.unwrap_or(false);
+        }
+
+        /*if brain.expert_mode == true {
             if current_knowledge_truthy.is_none() {
                 println!("{}{} is undetermined","\t".repeat(depth),  current.symbol, );
                 return None;
@@ -178,7 +188,7 @@ pub mod solver {
             current_knowledge = current_knowledge_truthy.unwrap();
         } else if brain.expert_mode == false {
             current_knowledge = current_knowledge_truthy.unwrap_or(false)
-        }
+        }*/
         /**/
         match condition {
             Condition::AND => {
