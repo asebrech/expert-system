@@ -30,16 +30,25 @@ pub struct Knowledge {
     pub fact: bool,
     pub calcul: String,
     pub requirements: Vec<Requirement>,
+    pub result_requirement: Option<Vec<Requirement>>,
     pub not: bool,
 }
 
 impl Knowledge {
-    pub fn new(symbol: String, fact: bool, calcul: String, requirements: Vec<Requirement>, not: bool) -> Self {
+    pub fn new(
+        symbol: String,
+        fact: bool,
+        calcul: String,
+        requirements: Vec<Requirement>,
+        result_requirement: Option<Vec<Requirement>>,
+        not: bool,
+    ) -> Self {
         Knowledge {
             symbol,
             fact,
             calcul,
             requirements,
+            result_requirement,
             not,
         }
     }

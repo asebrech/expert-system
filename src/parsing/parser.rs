@@ -73,7 +73,7 @@ pub fn create_knowledge(
     index: usize,
     requirements: Vec<Requirement>,
     data: &mut HashMap<String, Vec<Knowledge>>,
-    line: &str
+    line: &str,
 ) -> Result<(), String> {
     let (results, _) = get_requirements(chars, index + 1, data)?;
     if results.is_empty() {
@@ -82,38 +82,23 @@ pub fn create_knowledge(
     let chars_without = chars_without_parentheses(chars, index + 1);
     let (results_without, _) = get_requirements(&chars_without, 0, data)?;
 
-    if results_without[0].condition == Condition::END {
+    for result_without in results_without {
+        let result_requirement = if results.len() > 1 {
+            Some(results.clone())
+        } else {
+            None
+        };
         let knowledge = Knowledge::new(
-            results_without[0].symbol.clone(),
+            result_without.symbol.clone(),
             false,
             line.to_string(),
-            requirements,
-            results_without[0].not,
+            requirements.clone(),
+            result_requirement,
+            result_without.not,
         );
-        add_to_data(results[0].symbol.clone(), knowledge, data);
-    } else {
-        for result_without in results_without {
-            let mut all_requirements = requirements.clone();
-            all_requirements.last_mut().unwrap().condition = Condition::AND;
-            let mut results_clone = results.clone();
-            results_clone.last_mut().unwrap().condition = Condition::AND;
-            let requirement = Requirement::new(
-                result_without.symbol.clone(),
-                Condition::END,
-                result_without.not,
-            );
-            results_clone.push(requirement);
-            all_requirements.extend(results_clone);
-            let knowledge = Knowledge::new(
-                result_without.symbol.clone(),
-                false,
-                line.to_string(),
-                all_requirements.clone(),
-                result_without.not,
-            );
-            add_to_data(result_without.symbol.clone(), knowledge, data);
-        }
+        add_to_data(result_without.symbol.clone(), knowledge, data);
     }
+
     Ok(())
 }
 
@@ -136,8 +121,14 @@ pub fn get_requirements(
             let trim_result = content[1..content.len() - 1].to_string();
             let line: Vec<char> = trim_result.chars().collect();
             let (requirements_parentheses, _) = get_requirements(&line, 0, data)?;
-            let knowledge =
-                Knowledge::new(content.to_string(), false, "TODO".to_string(),requirements_parentheses, false);
+            let knowledge = Knowledge::new(
+                content.to_string(),
+                false,
+                "TODO".to_string(),
+                requirements_parentheses,
+                None,
+                false,
+            );
             add_to_data(content.to_string(), knowledge, data);
             let operator = get_operator(chars, content_index);
             let requirement = Requirement::new(content.to_string(), get_condition(operator)?, not);
@@ -177,7 +168,14 @@ pub fn check_line(
     if len > 1 && chars[0] == '=' && chars[1].is_alphabetic() {
         index += 1;
         while index < len && chars[index].is_alphabetic() {
-            let knowledge = Knowledge::new(chars[index].to_string(), true, line.to_string(), Vec::new(), false);
+            let knowledge = Knowledge::new(
+                chars[index].to_string(),
+                true,
+                line.to_string(),
+                Vec::new(),
+                None,
+                false,
+            );
             add_to_data(chars[index].to_string(), knowledge, data);
             index += 1;
         }
