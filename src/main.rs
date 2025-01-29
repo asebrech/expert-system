@@ -88,7 +88,7 @@ fn main() {
     // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
 
-    let file_path = "resources/input.txt";
+    let file_path = "resources/correct_and.txt";
 
     let lines = read_file(file_path).unwrap_or_else(|e| {
         println!("Error reading file: {}", e);

@@ -46,7 +46,7 @@ pub mod solver {
         if knowledge_vec.len() == 0 {
             println!("{}No requirement for {}",  "\t".repeat(depth), symbol);
             return Some(false);
-		} else if knowledge_vec.len() == 1 {
+		} /*else if knowledge_vec.len() == 1 {
 			for ele in knowledge_vec.into_iter() {
 				let mut prev = Condition::END;
 				for ele in ele.result_requirement.iter() {
@@ -60,7 +60,7 @@ pub mod solver {
 					return None;
 				}
 			}
-		}
+		}*/
 
         //if ke_vec is a fact, it is stored up front
         for ele in knowledge_vec {
