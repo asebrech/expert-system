@@ -83,13 +83,7 @@ use crate::parsing::parser::read_file;
     A is undetermined
 */
 
-fn main() {
-    dotenv().ok();
-    // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
-    env_logger::init_from_env(Env::default().default_filter_or("debug"));
-
-    let file_path = "resources/correct_and.txt";
-
+pub fn knowledge_engine_from_file(file_path: &str) -> KnowledgeEngine {
     let lines = read_file(file_path).unwrap_or_else(|e| {
         println!("Error reading file: {}", e);
         std::process::exit(1);
@@ -102,18 +96,27 @@ fn main() {
         println!("Error parsing file: {}", e);
         std::process::exit(1);
     });
+	return KnowledgeEngine {
+		data,
+		current_symbol: None,
+		search
+	};
+}
 
-    let mut ke = KnowledgeEngine {
-        data,
-        current_symbol: None
-    };
+fn main() {
+    dotenv().ok();
+    // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
+    env_logger::init_from_env(Env::default().default_filter_or("debug"));
+
+    let file_path = "tests/test_one.txt";
+    let mut ke = knowledge_engine_from_file(file_path);
 
     // println!("Facts to resolve : {:?}", search);
     // println!("{:?}", ke.data);
     let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
         resolved_data: HashMap::new()
     };
-   for element in &search {
+   for element in &ke.search.clone() {
     ke.current_symbol = Some(element.to_string());
         println!(
             "solving {:?} = {}\n",

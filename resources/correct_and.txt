@@ -11,4 +11,4 @@ N => M
 #AFKP are true
 #A good
 #F undetermined
-?AFKP
+?AFKPL

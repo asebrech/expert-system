@@ -8,6 +8,7 @@ pub mod solver {
     pub struct KnowledgeEngine {
         pub data:  std::collections::HashMap<std::string::String, std::vec::Vec<data_types::fact::Knowledge>>, //Need to put vector as we can have several rule for one knowledge
         pub current_symbol: Option<String>,
+		pub search: Vec<char>
     }
 
     pub struct KnowledgeCacheManager {
@@ -80,9 +81,9 @@ pub mod solver {
         println!("{}Processing all knowledge of {}, total: {}", "\t".repeat(depth), symbol, knowledge_vec.len());
 		
         for knowledge in knowledge_vec.iter() {
-			if is_result_symbol && knowledge.result_requirement.is_some() {
+			/*if is_result_symbol && knowledge.result_requirement.is_some() {
 				continue;
-			}
+			}*/
 			println!("comparing {} {}", current_calcul, &knowledge.calcul);
 			if current_calcul == &knowledge.calcul {
 				println!("Skipping check for {}", knowledge.symbol);
