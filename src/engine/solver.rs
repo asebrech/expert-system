@@ -2,8 +2,8 @@ pub mod solver {
 
     use core::time;
     use std::{
-        collections::{HashMap, HashSet},
-        thread::{self, sleep},
+        collections::HashMap,
+        thread::{self},
     };
 
     use crate::{data_types, Condition, Knowledge, Requirement};
@@ -26,7 +26,6 @@ pub mod solver {
         engine: &mut KnowledgeEngine,
         knowledge_cache_manager: &mut KnowledgeCacheManager,
     ) -> Option<bool> {
-        let mut symbol_met: HashSet<String> = HashSet::new();
         return get_knowledge_state(
             &symbol,
             engine,
@@ -171,12 +170,14 @@ pub mod solver {
                         if item.symbol == symbol {
                             //symbol_met.insert(symbol.to_string());
                             println!("Inserting  {}", symbol);
-                            continue;
                             println!(
                                 "Cached data found for {} => {:?}",
                                 knowledge.calcul,
                                 temp.map_or("undetermined".to_string(), |v| v.to_string())
                             );
+
+                            //might possibly want to return here or perform some action
+                            continue;
                         }
                     } else {
                         println!("checking {}", symbol);
