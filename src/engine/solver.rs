@@ -64,23 +64,7 @@ pub mod solver {
         if knowledge_vec.len() == 0 {
             println!("{}No requirement for {}", "\t".repeat(depth), symbol);
             return Some(false);
-        } /*else if knowledge_vec.len() == 1 {
-              for ele in knowledge_vec.into_iter() {
-                  let mut prev = Condition::END;
-                  for ele in ele.result_requirement.iter() {
-                      for ele in ele.into_iter() {
-                          println!("Prev COND {:?} COND iter {:?}", prev, ele.condition);
-                          if prev == Condition::AND && ele.symbol == symbol {
-                              return Some(true);
-                          }
-                          prev = ele.condition;
-                      }
-                      return None;
-                  }
-              }
-          }*/
-
-        //if ke_vec is a fact, it is stored up front
+        } //if ke_vec is a fact, it is stored up front
         for ele in knowledge_vec {
             if ele.fact {
                 println!(
@@ -111,7 +95,7 @@ pub mod solver {
                 println!("Skipping check for {}", knowledge.symbol);
                 if knowledge_vec.len() == 1 {
                     //and knowledge requirement isnt an equal sign, otherwise it is true
-                    return get_value_from_result_knowledge(&knowledge);
+                    return get_value_from_result_knowledge(&knowledge, &knowledge.symbol);
                 }
                 continue;
             }
@@ -239,9 +223,9 @@ pub mod solver {
         if knowledge.result_requirement.is_none() {
             return None;
         }
-        let prev: Option<Condition> = None;
-        let found = false;
-        for ele in knowledge.result_requirement.unwrap().iter() {
+        let mut prev: Option<Condition> = None;
+        let mut found = false;
+        for ele in knowledge.result_requirement.clone().unwrap().iter() {
             if found == true && prev.is_some() {
                 break;
             }
