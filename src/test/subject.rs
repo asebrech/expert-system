@@ -25,6 +25,8 @@ mod test {
         assert_eq!(actual_responses, expected_responses);
     }
 
+    // and_condition tests
+
     #[test]
     fn and_condition_0() {
         let file_path = "tests/subject/andCondition0.txt";
@@ -38,6 +40,8 @@ mod test {
         let expected_responses: [bool; 4] = [true, true, false, true];
         test_file(file_path, expected_responses.to_vec());
     }
+
+    // or_condition tests
 
     #[test]
     fn or_condition_0() {
@@ -67,6 +71,8 @@ mod test {
         test_file(file_path, expected_responses.to_vec());
     }
 
+    // xor_condition tests
+
     #[test]
     fn xor_condition_0() {
         let file_path = "tests/subject/xorCondition0.txt";
@@ -95,6 +101,38 @@ mod test {
         test_file(file_path, expected_responses.to_vec());
     }
 
+    // negation tests
+
+    #[test]
+    fn negation_0() {
+        let file_path = "tests/subject/negation0.txt";
+        let expected_responses: [bool; 1] = [false];
+        test_file(file_path, expected_responses.to_vec());
+    }
+
+    #[test]
+    fn negation_1() {
+        let file_path = "tests/subject/negation1.txt";
+        let expected_responses: [bool; 1] = [true];
+        test_file(file_path, expected_responses.to_vec());
+    }
+
+    #[test]
+    fn negation_2() {
+        let file_path = "tests/subject/negation2.txt";
+        let expected_responses: [bool; 1] = [false];
+        test_file(file_path, expected_responses.to_vec());
+    }
+
+    #[test]
+    fn negation_3() {
+        let file_path = "tests/subject/negation3.txt";
+        let expected_responses: [bool; 1] = [false];
+        test_file(file_path, expected_responses.to_vec());
+    }
+
+    // same_conclusion tests
+
     #[test]
     fn same_conclusion_0() {
         let file_path = "tests/subject/sameConclusion0.txt";
@@ -122,6 +160,8 @@ mod test {
         let expected_responses: [bool; 1] = [true];
         test_file(file_path, expected_responses.to_vec());
     }
+
+    // parentheses tests
 
     #[test]
     fn parentheses_0() {
