@@ -165,7 +165,7 @@ pub fn check_line(
     let len = chars.len();
     let mut index = 0;
 
-    if len > 1 && chars[0] == '=' && chars[1].is_alphabetic() {
+    if chars[0] == '=' {
         index += 1;
         while index < len && chars[index].is_alphabetic() {
             let knowledge = Knowledge::new(
@@ -178,9 +178,6 @@ pub fn check_line(
             );
             add_to_data(chars[index].to_string(), knowledge, data);
             index += 1;
-        }
-        if index < len {
-            return Err(format!("Invalid fact line: {}", line));
         }
         return Ok(());
     }
