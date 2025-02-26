@@ -151,7 +151,7 @@ pub mod solver {
                     }
                 }
             } else {
-                //println!("{}Default none", "\t".repeat(depth));
+                println!("{}Default none", "\t".repeat(depth));
                 knowledge_cache_manager
                     .resolved_data
                     .insert(knowledge.calcul.clone(), None);
@@ -322,7 +322,8 @@ pub mod solver {
         if lhs.is_none() || rhs.is_none() {
             return None;
         }
-        let mut lhs = compare_boolean(lhs.unwrap(), rhs.unwrap(), first_req.condition);
+		println!("{} && {} --- {} && {} : {}", lhs.unwrap(), first_req.not, rhs.unwrap(), second_req.not, (rhs.unwrap() && !second_req.not) || (!rhs.unwrap() && second_req.not));
+        let mut lhs = compare_boolean((lhs.unwrap() && !first_req.not) || (!lhs.unwrap() && first_req.not), (rhs.unwrap() && !second_req.not) || (!rhs.unwrap() && second_req.not), first_req.condition);
         if requirements.len() == 2 {
             return Some(lhs);
         }
@@ -339,7 +340,7 @@ pub mod solver {
             if rhs.is_none() {
                 return None;
             }
-            lhs = compare_boolean(lhs, rhs.unwrap(), previous.condition);
+            lhs = compare_boolean((lhs && !previous.not) || (!lhs && previous.not), (rhs.unwrap() && !item.not) || (!rhs.unwrap() && item.not), previous.condition);
             previous = item;
         }
 
@@ -347,6 +348,7 @@ pub mod solver {
     }
 
     fn compare_boolean(lhs: bool, rhs: bool, condition: Condition) -> bool {
+		println!("Comparing : {} {:?} {}", lhs, condition, rhs);
         return match condition {
             Condition::AND => lhs && rhs,
             Condition::OR => lhs || rhs,

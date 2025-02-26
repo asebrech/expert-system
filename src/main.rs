@@ -108,7 +108,7 @@ fn main() {
     // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
 
-    let file_path = "tests/test_one.txt";
+    let file_path = "tests/subject/parentheses1.txt";
     let mut ke = knowledge_engine_from_file(file_path);
 
     // println!("Facts to resolve : {:?}", search);
