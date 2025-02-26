@@ -85,11 +85,9 @@ pub mod solver {
             knowledge_vec.len()
         );
 
+		let mut answers: Vec<bool>  = vec![];
         for knowledge in knowledge_vec.iter() {
-            /*if is_result_symbol && knowledge.result_requirement.is_some() {
-                continue;
-            }*/
-            println!("comparing {} {}", current_calcul, &knowledge.calcul);
+            println!("coucou comparing {} {}", current_calcul, &knowledge.calcul);
             if current_calcul == &knowledge.calcul && is_result_symbol {
                 println!("Skipping check for {}", knowledge.symbol);
                 if knowledge_vec.len() == 1 {
@@ -147,7 +145,8 @@ pub mod solver {
                         knowledge_cache_manager
                             .resolved_data
                             .insert(knowledge.calcul.clone(), Some(false));
-                        return Some(false);
+						answers.push(false);
+						continue;
                     }
                 }
             } else {
@@ -197,7 +196,9 @@ pub mod solver {
                         } else if res2.unwrap() == false {
                             //resolution is false
                             println!("Resolution is false for {}", knowledge.calcul);
-                            return Some(false);
+							//push in array
+							answers.push(false);
+							continue;
                         }
                         knowledge_cache_manager
                             .resolved_data
@@ -208,13 +209,19 @@ pub mod solver {
             knowledge_cache_manager
                 .resolved_data
                 .insert(knowledge.calcul.clone(), Some(true));
+			//push true
+			answers.push(true);
         }
 
         //println!("Symbol met {:?}", symbol_met);
         println!("{}{} is true", "\t".repeat(depth), symbol);
-        //solve calcul if it exists, otherwise return true
 
-        Some(true)
+		println!("Array : {:?}", answers);
+		println!("FINAL : {}", answers.contains(&true));
+		if answers.contains(&true) && answers.contains(&false) {
+			println!("Contradiction found");
+		}
+        Some(answers.contains(&true))
     }
 
     fn get_value_from_result_knowledge(
