@@ -28,7 +28,7 @@ impl Requirement {
 pub struct Knowledge {
     pub symbol: String,
     pub fact: bool,
-    pub calcul: String,
+    pub calcul: Option<String>,
     pub requirements: Vec<Requirement>,
     pub result_requirement: Option<Vec<Requirement>>,
     pub not: bool,
@@ -38,7 +38,7 @@ impl Knowledge {
     pub fn new(
         symbol: String,
         fact: bool,
-        calcul: String,
+        calcul: Option<String>,
         requirements: Vec<Requirement>,
         result_requirement: Option<Vec<Requirement>>,
         not: bool,

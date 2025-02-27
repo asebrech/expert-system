@@ -180,11 +180,12 @@ pub fn create_knowledge(
         let knowledge = Knowledge::new(
             result_without.symbol.clone(),
             false,
-            line.to_string(),
+            Some(line.to_string()),
             requirements.clone(),
             result_requirement,
             result_without.not,
         );
+		println!("Knowledge {} for cache line : {}", result_without.symbol.clone(), line);
         add_to_data(result_without.symbol.clone(), knowledge, data);
     }
 
@@ -216,7 +217,7 @@ pub fn get_requirements(
             let knowledge = Knowledge::new(
                 content.to_string(),
                 false,
-                "TODO".to_string(),
+                None,
                 requirements_parentheses,
                 None,
                 false,
@@ -263,7 +264,7 @@ pub fn check_line(
             let knowledge = Knowledge::new(
                 chars[index].to_string(),
                 true,
-                line.to_string(),
+                None,
                 Vec::new(),
                 None,
                 false,
@@ -319,7 +320,7 @@ pub fn clean_line(line: &str, vec: &mut Vec<String>) {
             result.push(c);
         }
     }
-    println!("{}", result);
+	debug!("{}", result);
     if !result.is_empty() {
         vec.push(result);
     }

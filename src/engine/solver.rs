@@ -29,7 +29,7 @@ pub mod solver {
         return get_knowledge_state(
             &symbol,
             engine,
-            &"test".to_string(),
+            None,
             knowledge_cache_manager,
             0,
             false,
@@ -40,19 +40,19 @@ pub mod solver {
     fn get_knowledge_state(
         symbol: &str,
         engine: &KnowledgeEngine,
-        current_calcul: &String,
+        current_calcul:  Option<&String>,
         knowledge_cache_manager: &mut KnowledgeCacheManager,
         mut depth: usize,
         is_result_symbol: bool,
     ) -> Option<bool> {
-        let ten_millis = time::Duration::from_millis(200);
+        /*let ten_millis = time::Duration::from_millis(200);
 
-        thread::sleep(ten_millis);
+        thread::sleep(ten_millis);*/
         let knowledge_vec = engine.data.get(symbol);
         //println!("{}Evaluating : {}", "\t".repeat(depth), symbol);
         depth += 1;
         if knowledge_vec.is_none() {
-            println!("Sarutax {}", symbol);
+            println!("Symbol {} has no knowledge defined, default to false", symbol);
             if is_result_symbol {
                 return None;
             }
@@ -87,8 +87,8 @@ pub mod solver {
 
 		let mut answers: Vec<bool>  = vec![];
         for knowledge in knowledge_vec.iter() {
-            println!("coucou comparing {} {}", current_calcul, &knowledge.calcul);
-            if current_calcul == &knowledge.calcul && is_result_symbol {
+            //println!("coucou comparing {} {}", current_calcul, &knowledge.calcul);
+            if knowledge.calcul.is_some() && current_calcul.is_some() && current_calcul.unwrap() == &knowledge.calcul.clone().unwrap() && is_result_symbol {
                 println!("Skipping check for {}", knowledge.symbol);
                 if knowledge_vec.len() == 1 {
                     //and knowledge requirement isnt an equal sign, otherwise it is true
@@ -99,22 +99,25 @@ pub mod solver {
             println!(
                 "{}Checking formula: {} for {}",
                 "\t".repeat(depth),
-                knowledge.calcul,
+                "",
                 symbol
             );
             let are_req_met: Option<bool>;
-            if let Some(temp) = knowledge_cache_manager.resolved_data.get(&knowledge.calcul) {
-                are_req_met = *temp;
+			
+			//let Some(temp) = knowledge_cache_manager.resolved_data.get(&knowledge.calcul)
+
+            if knowledge.calcul.is_some() && knowledge_cache_manager.resolved_data.contains_key(&knowledge.calcul.clone().unwrap()) {
+                are_req_met = *knowledge_cache_manager.resolved_data.get(&knowledge.calcul.clone().unwrap()).unwrap();
                 println!(
                     "Cached data found for {} => {:?}",
-                    knowledge.calcul,
-                    temp.map_or("undetermined".to_string(), |v| v.to_string())
+                    knowledge.calcul.clone().unwrap().clone(),
+                    are_req_met.map_or("undetermined".to_string(), |v| v.to_string())
                 );
             } else {
                 are_req_met = process_formula(
                     &knowledge.requirements,
                     engine,
-                    current_calcul,
+                    None,
                     knowledge_cache_manager,
                     depth,
                     false,
@@ -125,9 +128,11 @@ pub mod solver {
                 //si le req est false, et que la knowledge veux que sa n existe pas
                 if are_req_met == false && knowledge.not {
                     println!("True 1");
-                    knowledge_cache_manager
+					if knowledge.calcul.is_some() {
+						knowledge_cache_manager
                         .resolved_data
-                        .insert(knowledge.calcul.clone(), Some(true));
+                        .insert(knowledge.calcul.clone().unwrap().clone(), Some(true));
+					}
                     return Some(true);
                 }
 
@@ -142,18 +147,23 @@ pub mod solver {
                     );
                     if are_req_met == false {
                         println!("XXFalse one");
-                        knowledge_cache_manager
+						if knowledge.calcul.is_some() {
+							knowledge_cache_manager
                             .resolved_data
-                            .insert(knowledge.calcul.clone(), Some(false));
+                            .insert(knowledge.calcul.clone().unwrap().clone(), Some(false));
+						}
 						answers.push(false);
 						continue;
                     }
                 }
             } else {
                 println!("{}Default none", "\t".repeat(depth));
-                knowledge_cache_manager
+				if knowledge.calcul.is_some() {
+					knowledge_cache_manager
                     .resolved_data
-                    .insert(knowledge.calcul.clone(), None);
+                    .insert(knowledge.calcul.clone().unwrap().clone(), None);
+				}
+
                 return None;
             }
             println!(
@@ -161,17 +171,19 @@ pub mod solver {
                 "\t".repeat(depth)
             );
             if let Some(krr) = &knowledge.result_requirement {
-                println!("calcul : {}", knowledge.calcul);
+                //println!("calcul : {}", knowledge.calcul);
                 for item in krr.iter() {
                     println!("Item : {}", item.symbol);
-                    if let Some(temp) = knowledge_cache_manager.resolved_data.get(&knowledge.calcul)
+					//let Some(temp) = knowledge_cache_manager.resolved_data.get(&knowledge.calcul)
+                    if knowledge.calcul.is_some() && knowledge_cache_manager.resolved_data.contains_key(&knowledge.calcul.clone().unwrap())
                     {
+						let temp = knowledge_cache_manager.resolved_data.get(&knowledge.calcul.clone().unwrap()).unwrap();
                         if item.symbol == symbol {
                             //symbol_met.insert(symbol.to_string());
                             println!("Inserting  {}", symbol);
                             println!(
                                 "Cached data found for {} => {:?}",
-                                knowledge.calcul,
+                                knowledge.calcul.clone().unwrap(),
                                 temp.map_or("undetermined".to_string(), |v| v.to_string())
                             );
 
@@ -183,7 +195,7 @@ pub mod solver {
                         let res2 = process_formula(
                             krr,
                             engine,
-                            &knowledge.calcul,
+                            knowledge.calcul.as_ref(),
                             knowledge_cache_manager,
                             depth,
                             true,
@@ -195,20 +207,26 @@ pub mod solver {
                             return None;
                         } else if res2.unwrap() == false {
                             //resolution is false
-                            println!("Resolution is false for {}", knowledge.calcul);
+                            //println!("Resolution is false for {}", knowledge.calcul);
 							//push in array
 							answers.push(false);
 							continue;
                         }
-                        knowledge_cache_manager
+						if knowledge.calcul.is_some() {
+							knowledge_cache_manager
                             .resolved_data
-                            .insert(knowledge.calcul.clone(), Some(true));
+                            .insert(knowledge.calcul.clone().unwrap().clone(), Some(true));
+						}
+  
                     }
                 }
             }
-            knowledge_cache_manager
+			if knowledge.calcul.is_some() {
+				knowledge_cache_manager
                 .resolved_data
-                .insert(knowledge.calcul.clone(), Some(true));
+                .insert(knowledge.calcul.clone().unwrap().clone(), Some(true));
+			}
+
 			//push true
 			answers.push(true);
         }
@@ -258,7 +276,7 @@ pub mod solver {
     fn process_knowledge_state(
         requirement: &Requirement,
         engine: &KnowledgeEngine,
-        current_calcul: &String,
+        current_calcul: Option<&String>,
         knowledge_cache_manager: &mut KnowledgeCacheManager,
         depth: usize,
         is_result_symbol: bool,
@@ -292,7 +310,7 @@ pub mod solver {
     fn process_formula(
         requirements: &Vec<Requirement>,
         brain: &KnowledgeEngine,
-        current_calcul: &String,
+        current_calcul: Option<&String>,
         knowledge_cache_manager: &mut KnowledgeCacheManager,
         depth: usize,
         is_result_symbol: bool,
