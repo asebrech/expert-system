@@ -85,21 +85,38 @@ pub fn priority_content(s: &str) -> String {
 
     while index < chars.len() {
         if index + 1 < chars.len() && chars[index + 1] == '|' && chars[index].is_alphabetic() {
-            result.push('[');
+            if index > 0 && chars[index - 1] == '!' {
+                result.pop();
+                result.push('[');
+                result.push('!');
+            } else {
+                result.push('[');
+            }
             result.push(chars[index]);
             index += 1;
             while index < chars.len()
-                && (chars[index].is_alphabetic() || chars[index] == '|' || chars[index] == '+')
+                && (chars[index].is_alphabetic()
+                    || chars[index] == '|'
+                    || chars[index] == '+'
+                    || chars[index] == '!')
             {
                 if index + 1 < chars.len()
                     && chars[index + 1] == '+'
                     && chars[index].is_alphabetic()
                 {
-                    result.push('[');
+                    if index > 0 && chars[index - 1] == '!' {
+                        result.pop();
+                        result.push('[');
+                        result.push('!');
+                    } else {
+                        result.push('[');
+                    }
                     result.push(chars[index]);
                     index += 1;
                     while index < chars.len()
-                        && (chars[index].is_alphabetic() || chars[index] == '+')
+                        && (chars[index].is_alphabetic()
+                            || chars[index] == '+'
+                            || chars[index] == '!')
                     {
                         result.push(chars[index]);
                         index += 1;
@@ -116,10 +133,18 @@ pub fn priority_content(s: &str) -> String {
         }
 
         if index + 1 < chars.len() && chars[index + 1] == '+' && chars[index].is_alphabetic() {
-            result.push('[');
+            if index > 0 && chars[index - 1] == '!' {
+                result.pop();
+                result.push('[');
+                result.push('!');
+            } else {
+                result.push('[');
+            }
             result.push(chars[index]);
             index += 1;
-            while index < chars.len() && (chars[index].is_alphabetic() || chars[index] == '+') {
+            while index < chars.len()
+                && (chars[index].is_alphabetic() || chars[index] == '+' || chars[index] == '!')
+            {
                 result.push(chars[index]);
                 index += 1;
             }
@@ -312,6 +337,7 @@ pub fn parse_lines(
     for a in vec {
         debug!("Line : {}", a);
         let priority_line = priority_content(&a);
+        println!("{}", priority_line);
         check_line(&priority_line, data, search)?;
     }
     Ok(())
