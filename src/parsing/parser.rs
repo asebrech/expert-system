@@ -42,16 +42,26 @@ pub fn get_condition(operator: char) -> Result<Condition, String> {
     }
 }
 
-pub fn parentheses_content(chars: &[char], start_index: usize) -> Result<(String, usize), String> {
+pub fn parentheses_content(
+    chars: &[char],
+    start_index: usize,
+    is_bracket: bool,
+) -> Result<(String, usize), String> {
     let mut result = String::new();
     let mut open_parens = 0;
     let mut index = start_index;
+    let mut open = '(';
+    let mut close = ')';
+    if is_bracket {
+        open = '[';
+        close = ']';
+    }
 
     while index < chars.len() {
         let c = chars[index];
-        if c == '(' {
+        if c == open {
             open_parens += 1;
-        } else if c == ')' {
+        } else if c == close {
             open_parens -= 1;
         }
         result.push(c);
@@ -66,6 +76,60 @@ pub fn parentheses_content(chars: &[char], start_index: usize) -> Result<(String
     }
 
     Ok((result, index))
+}
+
+pub fn priority_content(s: &str) -> String {
+    let mut index = 0;
+    let mut result = String::new();
+    let chars: Vec<char> = s.chars().collect();
+
+    while index < chars.len() {
+        if index + 1 < chars.len() && chars[index + 1] == '|' && chars[index].is_alphabetic() {
+            result.push('[');
+            result.push(chars[index]);
+            index += 1;
+            while index < chars.len()
+                && (chars[index].is_alphabetic() || chars[index] == '|' || chars[index] == '+')
+            {
+                if index + 1 < chars.len()
+                    && chars[index + 1] == '+'
+                    && chars[index].is_alphabetic()
+                {
+                    result.push('[');
+                    result.push(chars[index]);
+                    index += 1;
+                    while index < chars.len()
+                        && (chars[index].is_alphabetic() || chars[index] == '+')
+                    {
+                        result.push(chars[index]);
+                        index += 1;
+                    }
+                    result.push(']');
+                    continue;
+                }
+
+                result.push(chars[index]);
+                index += 1;
+            }
+            result.push(']');
+            continue;
+        }
+
+        if index + 1 < chars.len() && chars[index + 1] == '+' && chars[index].is_alphabetic() {
+            result.push('[');
+            result.push(chars[index]);
+            index += 1;
+            while index < chars.len() && (chars[index].is_alphabetic() || chars[index] == '+') {
+                result.push(chars[index]);
+                index += 1;
+            }
+            result.push(']');
+            continue;
+        }
+        result.push(chars[index]);
+        index += 1;
+    }
+    result
 }
 
 pub fn create_knowledge(
@@ -108,16 +172,19 @@ pub fn get_requirements(
     data: &mut HashMap<String, Vec<Knowledge>>,
 ) -> Result<(Vec<Requirement>, usize), String> {
     let mut requirements: Vec<Requirement> = Vec::new();
-    let syntax: Vec<char> = vec!['!', '('];
+    let syntax: Vec<char> = vec!['!', '(', '['];
     let len = chars.len();
+    let line_from_chars: String = chars.iter().collect();
+
     while index < len && (chars[index].is_alphabetic() || syntax.contains(&chars[index])) {
         let mut not = false;
         if chars[index] == '!' {
             not = true;
             index += 1;
         }
-        if chars[index] == '(' {
-            let (content, content_index) = parentheses_content(chars, index)?;
+        if chars[index] == '(' || chars[index] == '[' {
+            let is_bracket = chars[index] == '[';
+            let (content, content_index) = parentheses_content(chars, index, is_bracket)?;
             let trim_result = content[1..content.len() - 1].to_string();
             let line: Vec<char> = trim_result.chars().collect();
             let (requirements_parentheses, _) = get_requirements(&line, 0, data)?;
@@ -244,7 +311,8 @@ pub fn parse_lines(
     }
     for a in vec {
         debug!("Line : {}", a);
-        check_line(&a, data, search)?;
+        let priority_line = priority_content(&a);
+        check_line(&priority_line, data, search)?;
     }
     Ok(())
 }

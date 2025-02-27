@@ -96,11 +96,11 @@ pub fn knowledge_engine_from_file(file_path: &str) -> KnowledgeEngine {
         println!("Error parsing file: {}", e);
         std::process::exit(1);
     });
-	return KnowledgeEngine {
-		data,
-		current_symbol: None,
-		search
-	};
+    return KnowledgeEngine {
+        data,
+        current_symbol: None,
+        search,
+    };
 }
 
 fn main() {
@@ -108,16 +108,16 @@ fn main() {
     // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
 
-    let file_path = "tests/test_two.txt";
+    let file_path = "tests/subject/parentheses1.txt";
     let mut ke = knowledge_engine_from_file(file_path);
 
     // println!("Facts to resolve : {:?}", search);
     // println!("{:?}", ke.data);
     let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
-        resolved_data: HashMap::new()
+        resolved_data: HashMap::new(),
     };
-   for element in &ke.search.clone() {
-    ke.current_symbol = Some(element.to_string());
+    for element in &ke.search.clone() {
+        ke.current_symbol = Some(element.to_string());
         println!(
             "solving {:?} = {}\n",
             element,
