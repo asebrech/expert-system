@@ -156,13 +156,14 @@ pub fn create_knowledge(
     requirements: Vec<Requirement>,
     data: &mut HashMap<String, Vec<Knowledge>>,
     line: &str,
+    original_line: &String
 ) -> Result<(), String> {
-    let (results, _) = get_requirements(chars, index + 1, data)?;
+    let (results, _) = get_requirements(chars, index + 1, data, original_line)?;
     if results.is_empty() {
         return Err("Line missing result".to_string());
     }
     let chars_without = chars_without_parentheses(chars, index + 1);
-    let (results_without, _) = get_requirements(&chars_without, 0, data)?;
+    let (results_without, _) = get_requirements(&chars_without, 0, data, original_line)?;
 
     for result_without in results_without {
         let result_requirement = if results.len() > 1 {
@@ -176,6 +177,7 @@ pub fn create_knowledge(
             Some(line.to_string()),
             requirements.clone(),
             result_requirement,
+            original_line.to_string(),
             result_without.not,
         );
         println!(
@@ -193,6 +195,7 @@ pub fn get_requirements(
     chars: &[char],
     mut index: usize,
     data: &mut HashMap<String, Vec<Knowledge>>,
+    original_line: &String,
 ) -> Result<(Vec<Requirement>, usize), String> {
     let mut requirements: Vec<Requirement> = Vec::new();
     let syntax: Vec<char> = vec!['!', '(', '['];
@@ -210,13 +213,14 @@ pub fn get_requirements(
             let (content, content_index) = parentheses_content(chars, index, is_bracket)?;
             let trim_result = content[1..content.len() - 1].to_string();
             let line: Vec<char> = trim_result.chars().collect();
-            let (requirements_parentheses, _) = get_requirements(&line, 0, data)?;
+            let (requirements_parentheses, _) = get_requirements(&line, 0, data, original_line)?;
             let knowledge = Knowledge::new(
                 content.to_string(),
                 false,
                 None,
                 requirements_parentheses,
                 None,
+                original_line.to_string(),
                 false,
             );
             add_to_data(content.to_string(), knowledge, data);
@@ -250,6 +254,7 @@ pub fn check_line(
     line: &str,
     data: &mut HashMap<String, Vec<Knowledge>>,
     search: &mut Vec<char>,
+    original_line: &String,
 ) -> Result<(), String> {
     let chars: Vec<char> = line.chars().collect();
     let len = chars.len();
@@ -264,6 +269,7 @@ pub fn check_line(
                 None,
                 Vec::new(),
                 None,
+                original_line.to_string(),
                 false,
             );
             add_to_data(chars[index].to_string(), knowledge, data);
@@ -283,9 +289,9 @@ pub fn check_line(
         return Ok(());
     }
 
-    let (requirements, index) = get_requirements(&chars, index, data)?;
+    let (requirements, index) = get_requirements(&chars, index, data, original_line)?;
     if len > index && index > 0 && chars[index - 1] == '=' && chars[index] == '>' {
-        create_knowledge(&chars, index, requirements, data, line)?;
+        create_knowledge(&chars, index, requirements, data, line, original_line)?;
         return Ok(());
     }
 
@@ -295,14 +301,14 @@ pub fn check_line(
         && chars[index] == '='
         && chars[index + 1] == '>'
     {
-        create_knowledge(&chars, index + 1, requirements, data, line)?;
+        create_knowledge(&chars, index + 1, requirements, data, line, original_line)?;
         let before = &chars[..index - 1];
         let after = &chars[index + 2..];
         let mut new_string = String::new();
         new_string.push_str(&after.iter().collect::<String>());
         new_string.push_str("=>");
         new_string.push_str(&before.iter().collect::<String>());
-        return check_line(new_string.as_str(), data, search);
+        return check_line(new_string.as_str(), data, search, original_line);
     }
 
     Err(format!("Invalid line: {}", line))
@@ -336,7 +342,7 @@ pub fn parse_lines(
         debug!("Line : {}", a);
         let priority_line = priority_content(&a);
         println!("{}", priority_line);
-        check_line(&priority_line, data, search)?;
+        check_line(&priority_line, data, search, &a)?;
     }
     Ok(())
 }

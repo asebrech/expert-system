@@ -3,6 +3,7 @@ mod data_types;
 mod engine;
 mod parsing;
 mod test;
+use colored::Colorize;
 use data_types::fact::*;
 use dotenv::dotenv;
 use engine::solver::solver::{prove, KnowledgeCacheManager, KnowledgeEngine};
@@ -108,7 +109,7 @@ fn main() {
     // to remove debugging change to default_filter_or("info") or add RUST_LOG=info to .env
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
 
-    let file_path = "tests/subject/parentheses9.txt";
+    let file_path = "resources/correct_and.txt";
     let mut ke = knowledge_engine_from_file(file_path);
 
     // println!("Facts to resolve : {:?}", search);
@@ -118,11 +119,12 @@ fn main() {
     };
     for element in &ke.search.clone() {
         ke.current_symbol = Some(element.to_string());
+        println!("Resolving symbol {}\n", element);
         println!(
-            "solving {:?} = {}\n",
+            "{:?} is {}\n",
             element,
             prove(element.to_string(), &mut ke, &mut knowledge_cache_manager)
-                .map_or("undetermined".to_string(), |v| v.to_string())
+                .map_or("undetermined".to_string(), |v| v.to_string()).magenta()
         );
     }
 }

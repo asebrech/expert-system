@@ -31,6 +31,7 @@ pub struct Knowledge {
     pub calcul: Option<String>,
     pub requirements: Vec<Requirement>,
     pub result_requirement: Option<Vec<Requirement>>,
+    pub line: String,
     pub not: bool,
 }
 
@@ -41,6 +42,7 @@ impl Knowledge {
         calcul: Option<String>,
         requirements: Vec<Requirement>,
         result_requirement: Option<Vec<Requirement>>,
+        line: String,
         not: bool,
     ) -> Self {
         Knowledge {
@@ -49,6 +51,7 @@ impl Knowledge {
             calcul,
             requirements,
             result_requirement,
+            line,
             not,
         }
     }

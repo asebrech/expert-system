@@ -5,6 +5,10 @@ pub mod solver {
         collections::HashMap,
         thread::{self},
     };
+    use std::io::{stdin,stdout,Write};
+
+
+    use colored::Colorize;
 
     use crate::{data_types, Condition, Knowledge, Requirement};
 
@@ -20,6 +24,23 @@ pub mod solver {
     pub struct KnowledgeCacheManager {
         pub resolved_data: HashMap<String, Option<bool>>, //keeps track of resolved formulas
     }
+
+    pub fn process_user_input() -> Option<bool> {
+        let mut s=String::new();
+        let _=stdout().flush();
+        stdin().read_line(&mut s).expect("Did not enter a correct string");
+        if let Some('\n')=s.chars().next_back() {
+            s.pop();
+        }
+        if let Some('\r')=s.chars().next_back() {
+            s.pop();
+        }
+        //println!("You typed: {}",s);
+        Some(s == "true")
+    }
+
+
+
 
     pub fn prove(
         symbol: String,
@@ -61,7 +82,7 @@ pub mod solver {
 
         let knowledge_vec = knowledge_vec.unwrap();
         if knowledge_vec.len() == 0 {
-            println!("{}No requirement for {}", "\t".repeat(depth), symbol);
+            println!("{}No requirement for {}, default to false.", "\t".repeat(depth), symbol);
             return Some(false);
         } //if ke_vec is a fact, it is stored up front
         for ele in knowledge_vec {
@@ -77,19 +98,21 @@ pub mod solver {
             }
         }
         //symbol_met.insert(symbol.to_string());
+        if !is_result_symbol {
+            println!(
+                "{}Processing all knowledge of {}, total: {}",
+                "\t".repeat(depth),
+                symbol.green(),
+                knowledge_vec.len().to_string().red()
+            );
+        }
 
-        println!(
-            "{}Processing all knowledge of {}, total: {}",
-            "\t".repeat(depth),
-            symbol,
-            knowledge_vec.len()
-        );
 
 		let mut answers: Vec<bool>  = vec![];
         for knowledge in knowledge_vec.iter() {
             //println!("coucou comparing {} {}", current_calcul, &knowledge.calcul);
             if knowledge.calcul.is_some() && current_calcul.is_some() && current_calcul.unwrap() == &knowledge.calcul.clone().unwrap() && is_result_symbol {
-                println!("Skipping check for {}", knowledge.symbol);
+                //println!("Skipping check for {}", knowledge.symbol);
                 if knowledge_vec.len() == 1 {
                     //and knowledge requirement isnt an equal sign, otherwise it is true
                     return get_value_from_result_knowledge(&knowledge, &knowledge.symbol);
@@ -97,10 +120,10 @@ pub mod solver {
                 continue;
             }
             println!(
-                "{}Checking formula: {} for {}",
+                "{}Checking requirements for {} with formula {}",
                 "\t".repeat(depth),
-                "",
-                symbol
+                symbol.green(),
+                knowledge.line.bright_blue()
             );
             let are_req_met: Option<bool>;
 			
@@ -109,8 +132,9 @@ pub mod solver {
             if knowledge.calcul.is_some() && knowledge_cache_manager.resolved_data.contains_key(&knowledge.calcul.clone().unwrap()) {
                 are_req_met = *knowledge_cache_manager.resolved_data.get(&knowledge.calcul.clone().unwrap()).unwrap();
                 println!(
-                    "Cached data found for {} => {:?}",
-                    knowledge.calcul.clone().unwrap().clone(),
+                    "{}Cached data found for {} => {:?}",
+                    "\t".repeat(depth),
+                    knowledge.calcul.clone().unwrap().clone().green(),
                     are_req_met.map_or("undetermined".to_string(), |v| v.to_string())
                 );
             } else {
@@ -137,14 +161,14 @@ pub mod solver {
                 }
 
                 if are_req_met && knowledge.not {
-                    println!("{}!{} is true", "\t".repeat(depth), knowledge.symbol);
+                    println!("{}!{} is true one", "\t".repeat(depth), knowledge.symbol.green());
                 } else {
-                    println!(
-                        "{}{} is {}",
+                    /*println!(
+                        "{}{} is {} three",
                         "\t".repeat(depth),
-                        knowledge.symbol,
+                        knowledge.symbol.green(),
                         are_req_met
-                    );
+                    );*/
                     if are_req_met == false {
                         println!("XXFalse one");
 						if knowledge.calcul.is_some() {
@@ -157,7 +181,7 @@ pub mod solver {
                     }
                 }
             } else {
-                println!("{}Default none", "\t".repeat(depth));
+                println!("{} Default none", "\t".repeat(depth));
 				if knowledge.calcul.is_some() {
 					knowledge_cache_manager
                     .resolved_data
@@ -166,24 +190,20 @@ pub mod solver {
 
                 return None;
             }
-            println!(
-                "{}------------------------------------------------",
-                "\t".repeat(depth)
-            );
             if let Some(krr) = &knowledge.result_requirement {
                 //println!("calcul : {}", knowledge.calcul);
                 for item in krr.iter() {
-                    println!("Item : {}", item.symbol);
+                    //println!("Item : {}", item.symbol);
 					//let Some(temp) = knowledge_cache_manager.resolved_data.get(&knowledge.calcul)
                     if knowledge.calcul.is_some() && knowledge_cache_manager.resolved_data.contains_key(&knowledge.calcul.clone().unwrap())
                     {
 						let temp = knowledge_cache_manager.resolved_data.get(&knowledge.calcul.clone().unwrap()).unwrap();
                         if item.symbol == symbol {
                             //symbol_met.insert(symbol.to_string());
-                            println!("Inserting  {}", symbol);
+                            //println!("Inserting  {}", symbol);
                             println!(
                                 "Cached data found for {} => {:?}",
-                                knowledge.calcul.clone().unwrap(),
+                                knowledge.calcul.clone().unwrap().green(),
                                 temp.map_or("undetermined".to_string(), |v| v.to_string())
                             );
 
@@ -191,7 +211,7 @@ pub mod solver {
                             continue;
                         }
                     } else {
-                        println!("checking {}", symbol);
+                        println!("checking {}", symbol.green());
                         let res2 = process_formula(
                             krr,
                             engine,
@@ -200,14 +220,15 @@ pub mod solver {
                             depth,
                             true,
                         );
-                        println!("process res : {:?}", res2);
+                        //println!("process res : {:?}", res2);
                         if res2.is_none() {
                             //ask user to clarify
-                            println!("Asking user to clarify, he did not, undefined");
-                            return None;
+                            
+                            println!("Undetermined knowledge found, asking user to clarify symbol {}, enter true or false.", symbol);
+                            return process_user_input();
                         } else if res2.unwrap() == false {
                             //resolution is false
-                            //println!("Resolution is false for {}", knowledge.calcul);
+                            println!("Resolution is false for {:?}", knowledge.calcul);
 							//push in array
 							answers.push(false);
 							continue;
@@ -232,12 +253,12 @@ pub mod solver {
         }
 
         //println!("Symbol met {:?}", symbol_met);
-        println!("{}{} is true", "\t".repeat(depth), symbol);
+        println!("{}{} is true two", "\t".repeat(depth), symbol.green());
 
-		println!("Array : {:?}", answers);
-		println!("FINAL : {}", answers.contains(&true));
+		//println!("Array : {:?}", answers);
+		//println!("FINAL : {}", answers.contains(&true));
 		if answers.contains(&true) && answers.contains(&false) {
-			println!("Contradiction found");
+			println!("{}", "Contradiction found".red());
 		}
         Some(answers.contains(&true))
     }
@@ -292,18 +313,18 @@ pub mod solver {
         if !is_result_symbol {
             return res;
         }
-        println!("Checking in process knowledge state {}", requirement.symbol);
+        //println!("Checking in process knowledge state {} {}", requirement.symbol, is_result_symbol);
         // parse it as an answer response and return it
         if res.is_none() {
             if requirement.condition == Condition::AND {
-                println!("Req AND {}", !requirement.not);
+                //println!("Req AND {}", !requirement.not);
                 return Some(!requirement.not); //true if not is false and false if not is true, M A G I C
             }
             if requirement.condition == Condition::OR {
                 return None;
             }
         }
-        println!("Req res normal {:?}", res);
+        //println!("Req res normal {:?}", res);
         return res;
     }
 
@@ -347,7 +368,7 @@ pub mod solver {
         if lhs.is_none() || rhs.is_none() {
             return None;
         }
-		println!("{} && {} --- {} && {} : {}", lhs.unwrap(), first_req.not, rhs.unwrap(), second_req.not, (rhs.unwrap() && !second_req.not) || (!rhs.unwrap() && second_req.not));
+		//println!("{} && {} --- {} && {} : {}", lhs.unwrap(), first_req.not, rhs.unwrap(), second_req.not, (rhs.unwrap() && !second_req.not) || (!rhs.unwrap() && second_req.not));
         let mut lhs = compare_boolean((lhs.unwrap() && !first_req.not) || (!lhs.unwrap() && first_req.not), (rhs.unwrap() && !second_req.not) || (!rhs.unwrap() && second_req.not), first_req.condition);
         if requirements.len() == 2 {
             return Some(lhs);
@@ -373,7 +394,7 @@ pub mod solver {
     }
 
     fn compare_boolean(lhs: bool, rhs: bool, condition: Condition) -> bool {
-		println!("Comparing : {} {:?} {}", lhs, condition, rhs);
+		//println!("Comparing : {} {:?} {}", lhs, condition, rhs);
         return match condition {
             Condition::AND => lhs && rhs,
             Condition::OR => lhs || rhs,
