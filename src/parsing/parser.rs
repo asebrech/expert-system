@@ -83,15 +83,35 @@ pub fn priority_content(s: &str) -> String {
     let mut result = String::new();
     let chars: Vec<char> = s.chars().collect();
 
+    fn open_bracket(result: &mut String, chars: &[char], index: usize) {
+        if index > 0 && chars[index - 1] == '!' {
+            result.pop();
+            result.push('[');
+            result.push('!');
+        } else {
+            result.push('[');
+        }
+    }
+
+    fn process_plus_segment(chars: &[char], index: &mut usize, result: &mut String) {
+        open_bracket(result, chars, *index);
+        result.push(chars[*index]);
+        *index += 1;
+        while *index < chars.len()
+            && (chars[*index].is_alphabetic() || chars[*index] == '+' || chars[*index] == '!')
+        {
+            result.push(chars[*index]);
+            *index += 1;
+        }
+        result.push(']');
+    }
+
     while index < chars.len() {
+        if chars[index] == '=' || chars[index] == '<' {
+            break;
+        }
         if index + 1 < chars.len() && chars[index + 1] == '|' && chars[index].is_alphabetic() {
-            if index > 0 && chars[index - 1] == '!' {
-                result.pop();
-                result.push('[');
-                result.push('!');
-            } else {
-                result.push('[');
-            }
+            open_bracket(&mut result, &chars, index);
             result.push(chars[index]);
             index += 1;
             while index < chars.len()
@@ -104,27 +124,9 @@ pub fn priority_content(s: &str) -> String {
                     && chars[index + 1] == '+'
                     && chars[index].is_alphabetic()
                 {
-                    if index > 0 && chars[index - 1] == '!' {
-                        result.pop();
-                        result.push('[');
-                        result.push('!');
-                    } else {
-                        result.push('[');
-                    }
-                    result.push(chars[index]);
-                    index += 1;
-                    while index < chars.len()
-                        && (chars[index].is_alphabetic()
-                            || chars[index] == '+'
-                            || chars[index] == '!')
-                    {
-                        result.push(chars[index]);
-                        index += 1;
-                    }
-                    result.push(']');
+                    process_plus_segment(&chars, &mut index, &mut result);
                     continue;
                 }
-
                 result.push(chars[index]);
                 index += 1;
             }
@@ -133,24 +135,15 @@ pub fn priority_content(s: &str) -> String {
         }
 
         if index + 1 < chars.len() && chars[index + 1] == '+' && chars[index].is_alphabetic() {
-            if index > 0 && chars[index - 1] == '!' {
-                result.pop();
-                result.push('[');
-                result.push('!');
-            } else {
-                result.push('[');
-            }
-            result.push(chars[index]);
-            index += 1;
-            while index < chars.len()
-                && (chars[index].is_alphabetic() || chars[index] == '+' || chars[index] == '!')
-            {
-                result.push(chars[index]);
-                index += 1;
-            }
-            result.push(']');
+            process_plus_segment(&chars, &mut index, &mut result);
             continue;
         }
+
+        result.push(chars[index]);
+        index += 1;
+    }
+
+    while index < chars.len() {
         result.push(chars[index]);
         index += 1;
     }
@@ -185,7 +178,11 @@ pub fn create_knowledge(
             result_requirement,
             result_without.not,
         );
-		println!("Knowledge {} for cache line : {}", result_without.symbol.clone(), line);
+        println!(
+            "Knowledge {} for cache line : {}",
+            result_without.symbol.clone(),
+            line
+        );
         add_to_data(result_without.symbol.clone(), knowledge, data);
     }
 
@@ -320,7 +317,7 @@ pub fn clean_line(line: &str, vec: &mut Vec<String>) {
             result.push(c);
         }
     }
-	debug!("{}", result);
+    debug!("{}", result);
     if !result.is_empty() {
         vec.push(result);
     }
