@@ -156,7 +156,7 @@ pub fn create_knowledge(
     requirements: Vec<Requirement>,
     data: &mut HashMap<String, Vec<Knowledge>>,
     line: &str,
-    original_line: &String
+    original_line: &String,
 ) -> Result<(), String> {
     let (results, _) = get_requirements(chars, index + 1, data, original_line)?;
     if results.is_empty() {
@@ -180,11 +180,6 @@ pub fn create_knowledge(
             original_line.to_string(),
             result_without.not,
         );
-        println!(
-            "Knowledge {} for cache line : {}",
-            result_without.symbol.clone(),
-            line
-        );
         add_to_data(result_without.symbol.clone(), knowledge, data);
     }
 
@@ -200,7 +195,6 @@ pub fn get_requirements(
     let mut requirements: Vec<Requirement> = Vec::new();
     let syntax: Vec<char> = vec!['!', '(', '['];
     let len = chars.len();
-    let line_from_chars: String = chars.iter().collect();
 
     while index < len && (chars[index].is_alphabetic() || syntax.contains(&chars[index])) {
         let mut not = false;
@@ -341,7 +335,6 @@ pub fn parse_lines(
     for a in vec {
         debug!("Line : {}", a);
         let priority_line = priority_content(&a);
-        println!("{}", priority_line);
         check_line(&priority_line, data, search, &a)?;
     }
     Ok(())

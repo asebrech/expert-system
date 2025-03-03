@@ -3,7 +3,7 @@ mod test {
     use std::collections::HashMap;
 
     use crate::{
-        engine::solver::solver::{prove, KnowledgeCacheManager},
+        engine::solver::{prove, KnowledgeCacheManager},
         knowledge_engine_from_file,
     };
 
