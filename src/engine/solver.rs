@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::{stdin, stdout, Write};
+use std::{thread, time};
 
 use colored::Colorize;
 
@@ -50,6 +51,9 @@ fn get_knowledge_state(
 ) -> Option<bool> {
     let knowledge_vec = engine.data.get(symbol);
     depth += 1;
+	let ten_millis = time::Duration::from_millis(1000);
+	thread::sleep(ten_millis);
+	
     if knowledge_vec.is_none() {
         println!(
             "Symbol {} has no knowledge defined, default to false",

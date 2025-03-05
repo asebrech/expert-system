@@ -9,6 +9,7 @@ use engine::solver::{prove, KnowledgeCacheManager, KnowledgeEngine};
 use env_logger::Env;
 use parsing::parser::parse_lines;
 use std::collections::HashMap;
+use std::env;
 
 use crate::parsing::parser::read_file;
 
@@ -36,8 +37,8 @@ pub fn knowledge_engine_from_file(file_path: &str) -> KnowledgeEngine {
 fn main() {
     dotenv().ok();
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
-
-    let file_path = "tests/subject/andCondition0.txt";
+    let args: Vec<String> = env::args().collect();
+	let mut file_path = "";
     let mut ke = knowledge_engine_from_file(file_path);
 
     let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
