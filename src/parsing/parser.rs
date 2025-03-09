@@ -296,13 +296,16 @@ pub fn check_line(
         && chars[index + 1] == '>'
     {
         create_knowledge(&chars, index + 1, requirements, data, line, original_line)?;
-        let before = &chars[..index - 1];
-        let after = &chars[index + 2..];
+        let original_index = original_line.find('<').unwrap();
+        let original_chars: Vec<char> = original_line.chars().collect();
+        let before = &original_chars[..original_index];
+        let after = &original_chars[original_index + 3..];
         let mut new_string = String::new();
         new_string.push_str(&after.iter().collect::<String>());
         new_string.push_str("=>");
         new_string.push_str(&before.iter().collect::<String>());
-        return check_line(new_string.as_str(), data, search, original_line);
+        let priority_line = priority_content(&new_string);
+        return check_line(priority_line.as_str(), data, search, original_line);
     }
 
     Err(format!("Invalid line: {}", line))
