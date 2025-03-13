@@ -8,7 +8,7 @@ use dotenv::dotenv;
 use engine::solver::{prove, KnowledgeCacheManager, KnowledgeEngine};
 use env_logger::Env;
 use parsing::parser::parse_lines;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 
 use crate::parsing::parser::read_file;
@@ -53,7 +53,8 @@ fn main() {
 
     let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
         resolved_data: HashMap::new(),
-        previous_line: None
+        previous_line: None,
+        resolve_stack: HashSet::new()
     };
     for element in &ke.search.clone() {
         ke.current_symbol = Some(element.to_string());

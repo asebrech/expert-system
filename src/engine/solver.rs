@@ -1,6 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{stdin, stdout, Write};
-use std::{thread, time};
+use std::os::unix::process;
+use std::process::exit;
+use std::{env, thread, time};
 
 use colored::Colorize;
 
@@ -16,6 +18,7 @@ pub struct KnowledgeEngine {
 pub struct KnowledgeCacheManager {
     pub resolved_data: HashMap<String, Option<bool>>, //keeps track of resolved formulas
     pub previous_line: Option<String>,
+    pub resolve_stack: HashSet<String>,
 }
 
 pub fn process_user_input(symbol: &str) -> Option<bool> {
@@ -39,17 +42,18 @@ pub fn prove(
     engine: &mut KnowledgeEngine,
     knowledge_cache_manager: &mut KnowledgeCacheManager,
 ) -> Option<bool> {
+    knowledge_cache_manager.resolve_stack.clear();
+    knowledge_cache_manager.resolved_data.clear();
     get_knowledge_state(&symbol, engine, None, knowledge_cache_manager, 0, false)
 }
 
 fn has_symbol_in_knowledge(symbol: &str, vec: &Vec<Requirement>) -> bool {
     for ele in vec {
         if ele.symbol == symbol {
-            println!("Rust dev wesh ");
+            println!("Cyclic dependency found for symbol {}", symbol);
             return true;
         }
     }
-    println!("Crabbo false");
     return false;
 }
 
@@ -113,27 +117,51 @@ fn get_knowledge_state(
 
     let mut answers: Vec<bool> = vec![];
 
+    println!("{:?}", knowledge_cache_manager.resolve_stack);
    // println!("Before for {} {:?}", symbol, knowledge_cache_manager.previous_line);
     let mut vector_t = vec![];
     for knowledge in initial_vec.iter() {
         if knowledge_cache_manager.previous_line.is_some() && knowledge.line == knowledge_cache_manager.previous_line.clone().unwrap() {
             //println!("Found lines {}", knowledge.line);
-            vector_t.push(knowledge.clone());
+            if !has_symbol_in_knowledge(symbol, &knowledge.requirements) {
+                vector_t.push(knowledge.clone());
+            } else {
+                knowledge_cache_manager.resolve_stack.remove(symbol);
+                return process_user_input(symbol)
+            }
         }
     }
     if vector_t.len() == 0 {
         for knowledge in initial_vec.iter() {
-            if  !has_symbol_in_knowledge(symbol, &knowledge.requirements) {
+            if !has_symbol_in_knowledge(symbol, &knowledge.requirements) {
                 vector_t.push(knowledge.clone());
+            } else {
+                knowledge_cache_manager.resolve_stack.remove(symbol);
+                return process_user_input(symbol)
             }
         }
     }
-
-    println!("{} {:?} {}", symbol, knowledge_cache_manager.previous_line, vector_t.len());
+    //println!("{} {:?} {}", symbol, knowledge_cache_manager.previous_line, vector_t.len());
     for knowledge in vector_t.iter() {
        // println!("{} {} {:?}", knowledge.symbol, knowledge.line, knowledge_cache_manager.previous_line);
         //println!("{} {} {}", knowledge.symbol, engine.current_symbol.clone().unwrap(), knowledge.line);
-
+        if knowledge_cache_manager.resolve_stack.contains(&knowledge.symbol.to_string()) && !is_result_symbol { 
+            println!("Dependence cyclique for {}", symbol);
+            knowledge_cache_manager.resolve_stack.remove(&knowledge.symbol);
+            match env::var("EXPERT_MODE") {
+                Ok(_v) => {
+                    knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
+                    return process_user_input(&knowledge.symbol);
+                },
+                Err(_e) => {
+                    knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
+                    return None;
+                }
+            }
+        }
+        if !is_result_symbol {
+            knowledge_cache_manager.resolve_stack.insert(symbol.to_string());
+        }
         if knowledge.calcul.is_some()
             && current_calcul.is_some()
             && current_calcul.unwrap() == &knowledge.calcul.clone().unwrap()
@@ -141,6 +169,7 @@ fn get_knowledge_state(
         {
             if vector_t.len() == 1 {
                 //and knowledge requirement isnt an equal sign, otherwise it is true
+                knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
                 return get_value_from_result_knowledge(knowledge, &knowledge.symbol);
             }
             continue;
@@ -180,6 +209,7 @@ fn get_knowledge_state(
                 depth,
                 false,
             );
+            //println!("ENEVER  {:?}", are_req_met)
         }
         if let Some(are_req_met) = are_req_met {
             if !are_req_met && knowledge.not {
@@ -189,6 +219,7 @@ fn get_knowledge_state(
                         .resolved_data
                         .insert(knowledge.calcul.clone().unwrap().clone(), Some(true));
                 }
+                knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
                 return Some(true);
             }
 
@@ -206,6 +237,7 @@ fn get_knowledge_state(
                         .resolved_data
                         .insert(knowledge.calcul.clone().unwrap().clone(), Some(false));
                 }
+                knowledge_cache_manager.resolve_stack.remove(&knowledge.symbol);
                 answers.push(false);
                 continue;
             }
@@ -216,7 +248,7 @@ fn get_knowledge_state(
                     .resolved_data
                     .insert(knowledge.calcul.clone().unwrap().clone(), None);
             }
-
+            knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
             return None;
         }
         if let Some(krr) = &knowledge.result_requirement {
@@ -250,13 +282,16 @@ fn get_knowledge_state(
                         depth,
                         true,
                     );
+                    //println!("Enever 2 {:?}", res2);
                     if res2.is_none() {
                         //ask user to clarify
+                        knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
                         return process_user_input(symbol);
                     } else if !res2.unwrap() {
                         //resolution is false
                         println!("Resolution is false for {:?}", knowledge.calcul);
                         //push in array
+                        knowledge_cache_manager.resolve_stack.remove(&knowledge.symbol);
                         answers.push(false);
                         continue;
                     }
@@ -275,15 +310,18 @@ fn get_knowledge_state(
         }
 
         //push true
+        knowledge_cache_manager.resolve_stack.remove(&knowledge.symbol);
         answers.push(true);
     }
 
-    println!("{}{} is true two", "\t".repeat(depth), symbol.green());
-    if answers.contains(&true) && answers.contains(&false) {
+    let final_result = answers.contains(&true);
+    if final_result && answers.contains(&false) {
         println!("{}", "Contradiction found".red());
         println!("{}", "If one of the answers are true, the symbol will be true".yellow());
     }
-    Some(answers.contains(&true))
+    println!("{}{} is {} two", "\t".repeat(depth), symbol.green(), final_result);
+    knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
+    Some(final_result)
 }
 
 fn get_value_from_result_knowledge(knowledge: &Knowledge, symbol_to_find: &str) -> Option<bool> {
@@ -353,7 +391,7 @@ fn process_formula(
 ) -> Option<bool> {
     let first_req = requirements.first().unwrap();
     if requirements.len() <= 1 {
-        return process_knowledge_state(
+        let e = process_knowledge_state(
             first_req,
             brain,
             current_calcul,
@@ -361,6 +399,8 @@ fn process_formula(
             depth,
             is_result_symbol,
         );
+        //println!("adieu {:?}", e);
+        return e;
     }
     let second_req = requirements.get(1).unwrap();
     let mut previous = second_req;
@@ -372,6 +412,17 @@ fn process_formula(
         depth,
         is_result_symbol,
     );
+    if lhs.is_none() {
+        match env::var("EXPERT_MODE") {
+            Ok(_v) => {
+                knowledge_cache_manager.resolve_stack.remove(&first_req.symbol);
+                lhs = process_user_input(&first_req.symbol);
+            },
+            Err(_e) => {
+                return None;
+            }
+        }
+    }
     let mut rhs = process_knowledge_state(
         second_req,
         brain,
@@ -380,14 +431,16 @@ fn process_formula(
         depth,
         is_result_symbol,
     );
-    if lhs.is_none() || rhs.is_none() {
-        if lhs.is_none() {
-            lhs = process_user_input(&first_req.symbol);
+    if rhs.is_none() {
+        match env::var("EXPERT_MODE") {
+            Ok(_v) => {
+                knowledge_cache_manager.resolve_stack.remove(&second_req.symbol);
+                rhs = process_user_input(&second_req.symbol);
+            },
+            Err(_e) => {
+                return None;
+            }
         }
-        if rhs.is_none() {
-            rhs = process_user_input(&second_req.symbol);
-        }
-        //return process_user_input(&first_req.symbol);
     }
     let mut lhs = compare_boolean(
         (lhs.unwrap() && !first_req.not) || (!lhs.unwrap() && first_req.not),
@@ -408,6 +461,7 @@ fn process_formula(
             is_result_symbol,
         );
         if rhs? {
+            knowledge_cache_manager.resolve_stack.remove(&item.symbol);
             rhs = process_user_input(&item.symbol);
         }
         lhs = compare_boolean(

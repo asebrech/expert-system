@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     use crate::{
         engine::solver::{prove, KnowledgeCacheManager},
@@ -13,6 +13,7 @@ mod test {
         let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
             previous_line: None,
             resolved_data: HashMap::new(),
+            resolve_stack: HashSet::new()
         };
         assert_eq!(
             prove(
@@ -29,6 +30,7 @@ mod test {
         let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
             previous_line: None,
             resolved_data: HashMap::new(),
+            resolve_stack: HashSet::new()
         };
         assert_eq!(
             prove(

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
 
     use crate::{
         engine::solver::{prove, KnowledgeCacheManager},
@@ -13,6 +13,7 @@ mod test {
         let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
             previous_line: None,
             resolved_data: HashMap::new(),
+            resolve_stack: HashSet::new()
         };
 
         let mut actual_responses = Vec::new();
@@ -206,7 +207,7 @@ mod test {
         test_file(file_path, expected_responses.to_vec());
     }
 
-    /*#[test]
+    #[test]
     fn parentheses_6() {
         let file_path = "tests/subject/parentheses6.txt";
         let expected_responses: [bool; 1] = [false];
@@ -239,5 +240,5 @@ mod test {
         let file_path = "tests/subject/parentheses10.txt";
         let expected_responses: [bool; 1] = [true];
         test_file(file_path, expected_responses.to_vec());
-    }*/
+    }
 }
