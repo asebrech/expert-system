@@ -285,8 +285,16 @@ fn get_knowledge_state(
                     //println!("Enever 2 {:?}", res2);
                     if res2.is_none() {
                         //ask user to clarify
-                        knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
-                        return process_user_input(symbol);
+                        match env::var("EXPERT_MODE") {
+                            Ok(_v) => {
+                                knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
+                                return process_user_input(&knowledge.symbol);
+                            },
+                            Err(_e) => {
+                                knowledge_cache_manager.resolve_stack.remove(&symbol.to_string());
+                                return None;
+                            }
+                        }
                     } else if !res2.unwrap() {
                         //resolution is false
                         println!("Resolution is false for {:?}", knowledge.calcul);
@@ -462,7 +470,12 @@ fn process_formula(
         );
         if rhs? {
             knowledge_cache_manager.resolve_stack.remove(&item.symbol);
-            rhs = process_user_input(&item.symbol);
+            match env::var("EXPERT_MODE") {
+                Ok(_v) => {
+                    rhs = process_user_input(&item.symbol);
+                },
+                Err(_e) => {}
+            }   
         }
         lhs = compare_boolean(
             (lhs && !previous.not) || (!lhs && previous.not),
