@@ -15,10 +15,12 @@ pub struct KnowledgeEngine {
 
 pub struct KnowledgeCacheManager {
     pub resolved_data: HashMap<String, Option<bool>>, //keeps track of resolved formulas
+    pub previous_line: Option<String>,
 }
 
-pub fn process_user_input() -> Option<bool> {
+pub fn process_user_input(symbol: &str) -> Option<bool> {
     let mut s = String::new();
+    println!("Undetermined knowledge found, asking user to clarify symbol {}, enter true or false.", symbol);
     let _ = stdout().flush();
     stdin()
         .read_line(&mut s)
@@ -40,21 +42,35 @@ pub fn prove(
     get_knowledge_state(&symbol, engine, None, knowledge_cache_manager, 0, false)
 }
 
+fn has_symbol_in_knowledge(symbol: &str, vec: &Vec<Requirement>) -> bool {
+    for ele in vec {
+        if ele.symbol == symbol {
+            println!("Rust dev wesh ");
+            return true;
+        }
+    }
+    println!("Crabbo false");
+    return false;
+}
+
 //check if given knowledge is true, false or none (undetermined)
 fn get_knowledge_state(
-    symbol: &str,
+    symbol: &str, //[A + B]
     engine: &KnowledgeEngine,
     current_calcul: Option<&String>,
     knowledge_cache_manager: &mut KnowledgeCacheManager,
     mut depth: usize,
     is_result_symbol: bool,
 ) -> Option<bool> {
-    let knowledge_vec = engine.data.get(symbol);
+    let initial_vec = engine.data.get(symbol);
     depth += 1;
-	let ten_millis = time::Duration::from_millis(1000);
-	thread::sleep(ten_millis);
-	
-    if knowledge_vec.is_none() {
+    if !cfg!(test) {
+        let ten_millis = time::Duration::from_millis(200);
+        thread::sleep(ten_millis);
+        
+    }
+
+    if initial_vec.is_none() {
         println!(
             "Symbol {} has no knowledge defined, default to false",
             symbol
@@ -65,8 +81,8 @@ fn get_knowledge_state(
         return Some(false);
     }
 
-    let knowledge_vec = knowledge_vec.unwrap();
-    if knowledge_vec.is_empty() {
+    let initial_vec = initial_vec.unwrap();
+    if initial_vec.is_empty() {
         println!(
             "{}No requirement for {}, default to false.",
             "\t".repeat(depth),
@@ -74,7 +90,7 @@ fn get_knowledge_state(
         );
         return Some(false);
     } //if ke_vec is a fact, it is stored up front
-    for ele in knowledge_vec {
+    for ele in initial_vec {
         if ele.fact {
             println!(
                 "{}{}{} is a fact that is {}",
@@ -91,18 +107,39 @@ fn get_knowledge_state(
             "{}Processing all knowledge of {}, total: {}",
             "\t".repeat(depth),
             symbol.green(),
-            knowledge_vec.len().to_string().red()
+            initial_vec.len().to_string().red()
         );
     }
 
     let mut answers: Vec<bool> = vec![];
-    for knowledge in knowledge_vec.iter() {
+
+   // println!("Before for {} {:?}", symbol, knowledge_cache_manager.previous_line);
+    let mut vector_t = vec![];
+    for knowledge in initial_vec.iter() {
+        if knowledge_cache_manager.previous_line.is_some() && knowledge.line == knowledge_cache_manager.previous_line.clone().unwrap() {
+            //println!("Found lines {}", knowledge.line);
+            vector_t.push(knowledge.clone());
+        }
+    }
+    if vector_t.len() == 0 {
+        for knowledge in initial_vec.iter() {
+            if  !has_symbol_in_knowledge(symbol, &knowledge.requirements) {
+                vector_t.push(knowledge.clone());
+            }
+        }
+    }
+
+    println!("{} {:?} {}", symbol, knowledge_cache_manager.previous_line, vector_t.len());
+    for knowledge in vector_t.iter() {
+       // println!("{} {} {:?}", knowledge.symbol, knowledge.line, knowledge_cache_manager.previous_line);
+        //println!("{} {} {}", knowledge.symbol, engine.current_symbol.clone().unwrap(), knowledge.line);
+
         if knowledge.calcul.is_some()
             && current_calcul.is_some()
             && current_calcul.unwrap() == &knowledge.calcul.clone().unwrap()
             && is_result_symbol
         {
-            if knowledge_vec.len() == 1 {
+            if vector_t.len() == 1 {
                 //and knowledge requirement isnt an equal sign, otherwise it is true
                 return get_value_from_result_knowledge(knowledge, &knowledge.symbol);
             }
@@ -114,6 +151,9 @@ fn get_knowledge_state(
             symbol.green(),
             knowledge.line.bright_blue()
         );
+        if symbol.len() == 1 {
+            knowledge_cache_manager.previous_line = Some(knowledge.line.to_string());
+        }
         let are_req_met: Option<bool>;
 
         if knowledge.calcul.is_some()
@@ -152,13 +192,14 @@ fn get_knowledge_state(
                 return Some(true);
             }
 
-            if are_req_met && knowledge.not {
-                println!(
-                    "{}!{} is true one",
-                    "\t".repeat(depth),
-                    knowledge.symbol.green()
-                );
-            } else if !are_req_met {
+            if are_req_met && knowledge.not || !are_req_met {
+                if are_req_met && knowledge.not {
+                    println!(
+                        "{}!{} is true one",
+                        "\t".repeat(depth),
+                        knowledge.symbol.green()
+                    );
+                }
                 println!("XXFalse one");
                 if knowledge.calcul.is_some() {
                     knowledge_cache_manager
@@ -211,9 +252,7 @@ fn get_knowledge_state(
                     );
                     if res2.is_none() {
                         //ask user to clarify
-
-                        println!("Undetermined knowledge found, asking user to clarify symbol {}, enter true or false.", symbol);
-                        return process_user_input();
+                        return process_user_input(symbol);
                     } else if !res2.unwrap() {
                         //resolution is false
                         println!("Resolution is false for {:?}", knowledge.calcul);
@@ -240,9 +279,9 @@ fn get_knowledge_state(
     }
 
     println!("{}{} is true two", "\t".repeat(depth), symbol.green());
-
     if answers.contains(&true) && answers.contains(&false) {
         println!("{}", "Contradiction found".red());
+        println!("{}", "If one of the answers are true, the symbol will be true".yellow());
     }
     Some(answers.contains(&true))
 }
@@ -325,7 +364,7 @@ fn process_formula(
     }
     let second_req = requirements.get(1).unwrap();
     let mut previous = second_req;
-    let lhs = process_knowledge_state(
+    let mut lhs = process_knowledge_state(
         first_req,
         brain,
         current_calcul,
@@ -342,7 +381,13 @@ fn process_formula(
         is_result_symbol,
     );
     if lhs.is_none() || rhs.is_none() {
-        return None;
+        if lhs.is_none() {
+            lhs = process_user_input(&first_req.symbol);
+        }
+        if rhs.is_none() {
+            rhs = process_user_input(&second_req.symbol);
+        }
+        //return process_user_input(&first_req.symbol);
     }
     let mut lhs = compare_boolean(
         (lhs.unwrap() && !first_req.not) || (!lhs.unwrap() && first_req.not),
@@ -363,7 +408,7 @@ fn process_formula(
             is_result_symbol,
         );
         if rhs? {
-            return None;
+            rhs = process_user_input(&item.symbol);
         }
         lhs = compare_boolean(
             (lhs && !previous.not) || (!lhs && previous.not),

@@ -16,6 +16,7 @@ use crate::parsing::parser::read_file;
 pub fn knowledge_engine_from_file(file_path: &str) -> KnowledgeEngine {
     let lines = read_file(file_path).unwrap_or_else(|e| {
         println!("Error reading file: {}", e);
+        println!("Expert System usage : file");
         std::process::exit(1);
     });
 
@@ -34,15 +35,25 @@ pub fn knowledge_engine_from_file(file_path: &str) -> KnowledgeEngine {
     }
 }
 
+fn ensure_program_args(args: &Vec<String>) {
+    if args.len() < 2 {
+        println!("Usage ./expert pathToFile");
+        std::process::exit(1);
+    }
+}
+
 fn main() {
     dotenv().ok();
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
     let args: Vec<String> = env::args().collect();
-	let mut file_path = "";
-    let mut ke = knowledge_engine_from_file(file_path);
+    ensure_program_args(&args);
+	let mut file_path = &args[1];
+    println!("{:?}", args);
+    let mut ke = knowledge_engine_from_file(&file_path);
 
     let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
         resolved_data: HashMap::new(),
+        previous_line: None
     };
     for element in &ke.search.clone() {
         ke.current_symbol = Some(element.to_string());
