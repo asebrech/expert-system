@@ -112,6 +112,11 @@ fn main() {
 
     launch_resolve(ke);
 
+    match env::var("EXPERT_MODE") {
+        Ok(_v) => {}
+        Err(_e) => return,
+    }
+
     loop {
         let mut ke = knowledge_engine_from_lines(lines.clone());
 
@@ -121,7 +126,7 @@ fn main() {
         let input = get_user_input();
 
         if input.contains("y") {
-            println!("Enter your new knowledge : []=>[]\\n ?[]\\n =[]\\n then cmd+D");
+            println!("Enter your new knowledge : []=>[]\\n ?[]\\n =[]\\n then ctrl+D");
 
             for line in stdin.lock().lines() {
                 match line {
