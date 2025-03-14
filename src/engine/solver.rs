@@ -58,6 +58,27 @@ fn has_symbol_in_knowledge(symbol: &str, vec: &Vec<Requirement>) -> bool {
     return false;
 }
 
+
+fn print_line(depth: usize, data: String) {
+    let mut chars: Vec<char> = Vec::new();
+
+    let mut i = 0;
+    while i < depth {
+        if i == 0 {
+            chars.push('│');
+        } else if i % 2 == 0 {
+            chars.push('─');
+        } else if i % 2 != 0 {
+            chars.push('├');
+        } else {
+            chars.push(' '); 
+        }
+        i += 1;
+    }
+    println!("{:?}{}", chars, data);
+
+}
+
 //check if given knowledge is true, false or none (undetermined)
 fn get_knowledge_state(
     symbol: &str, //[A + B]
@@ -75,10 +96,8 @@ fn get_knowledge_state(
     }
 
     if initial_vec.is_none() {
-        println!(
-            "Symbol {} has no knowledge defined, default to false",
-            symbol
-        );
+        print_line(depth, format!("{}{} is false", "\t".repeat(depth),
+            symbol));
         if is_result_symbol {
             return None;
         }
@@ -106,18 +125,9 @@ fn get_knowledge_state(
             return Some(ele.fact && !ele.not);
         }
     }
-    if !is_result_symbol {
-        println!(
-            "{}Processing all knowledge of {}, total: {}",
-            "\t".repeat(depth),
-            symbol.green(),
-            initial_vec.len().to_string().red()
-        );
-    }
 
     let mut answers: Vec<bool> = vec![];
 
-    println!("{:?}", knowledge_cache_manager.resolve_stack);
     // println!("Before for {} {:?}", symbol, knowledge_cache_manager.previous_line);
     let mut vector_t = vec![];
     for knowledge in initial_vec.iter() {
@@ -129,6 +139,8 @@ fn get_knowledge_state(
                 vector_t.push(knowledge.clone());
             } else {
                 knowledge_cache_manager.resolve_stack.remove(symbol);
+                println!(" RES SYM  1 {} {}", symbol, is_result_symbol);
+
                 return process_user_input(symbol);
             }
         }
@@ -139,6 +151,8 @@ fn get_knowledge_state(
                 vector_t.push(knowledge.clone());
             } else {
                 knowledge_cache_manager.resolve_stack.remove(symbol);
+                println!(" RES SYM 2 {} {}", symbol, is_result_symbol);
+
                 return process_user_input(symbol);
             }
         }
@@ -147,6 +161,7 @@ fn get_knowledge_state(
     for knowledge in vector_t.iter() {
         // println!("{} {} {:?}", knowledge.symbol, knowledge.line, knowledge_cache_manager.previous_line);
         //println!("{} {} {}", knowledge.symbol, engine.current_symbol.clone().unwrap(), knowledge.line);
+         
         if knowledge_cache_manager
             .resolve_stack
             .contains(&knowledge.symbol.to_string())
@@ -161,6 +176,8 @@ fn get_knowledge_state(
                     knowledge_cache_manager
                         .resolve_stack
                         .remove(&symbol.to_string());
+                    println!(" RES SYM 3 {} {}", knowledge.symbol, is_result_symbol);
+
                     return process_user_input(&knowledge.symbol);
                 }
                 Err(_e) => {
@@ -218,6 +235,7 @@ fn get_knowledge_state(
             );
         } else {
             are_req_met = process_formula(
+                symbol,
                 &knowledge.requirements,
                 engine,
                 None,
@@ -295,8 +313,9 @@ fn get_knowledge_state(
                         continue;
                     }
                 } else {
-                    println!("checking {}", symbol.green());
+                    println!("checking {} {}", symbol.green(), is_result_symbol);
                     let res2 = process_formula(
+                        symbol,
                         krr,
                         engine,
                         knowledge.calcul.as_ref(),
@@ -312,6 +331,7 @@ fn get_knowledge_state(
                                 knowledge_cache_manager
                                     .resolve_stack
                                     .remove(&symbol.to_string());
+                                println!(" RES SYM 4 {} {}", knowledge.symbol, is_result_symbol);
                                 return process_user_input(&knowledge.symbol);
                             }
                             Err(_e) => {
@@ -328,7 +348,11 @@ fn get_knowledge_state(
                         knowledge_cache_manager
                             .resolve_stack
                             .remove(&knowledge.symbol);
+                        knowledge_cache_manager
+                        .resolved_data
+                        .insert(knowledge.calcul.clone().unwrap().clone(), Some(false));
                         answers.push(false);
+                        return Some(false);
                         continue;
                     }
                     if knowledge.calcul.is_some() {
@@ -369,6 +393,7 @@ fn get_knowledge_state(
     knowledge_cache_manager
         .resolve_stack
         .remove(&symbol.to_string());
+    println!("returning {} {}", symbol, final_result);
     Some(final_result)
 }
 
@@ -430,6 +455,7 @@ fn process_knowledge_state(
 }
 
 fn process_formula(
+    symbol: &str,
     requirements: &[Requirement],
     brain: &KnowledgeEngine,
     current_calcul: Option<&String>,
@@ -463,10 +489,18 @@ fn process_formula(
     if lhs.is_none() {
         match env::var("EXPERT_MODE") {
             Ok(_v) => {
-                knowledge_cache_manager
+                if !is_result_symbol {
+                    knowledge_cache_manager
                     .resolve_stack
                     .remove(&first_req.symbol);
-                lhs = process_user_input(&first_req.symbol);
+                } else {
+                    println!(" RES SYM 5 {} {}", first_req.symbol, is_result_symbol);
+
+                    lhs = process_user_input(&first_req.symbol);
+                    if symbol == first_req.symbol {
+                        return lhs;
+                    }
+                }
             }
             Err(_e) => {
                 return None;
@@ -484,10 +518,18 @@ fn process_formula(
     if rhs.is_none() {
         match env::var("EXPERT_MODE") {
             Ok(_v) => {
-                knowledge_cache_manager
+                if !is_result_symbol {
+                    knowledge_cache_manager
                     .resolve_stack
                     .remove(&second_req.symbol);
-                rhs = process_user_input(&second_req.symbol);
+                } else {
+                    println!(" RES SYM 6 {} {}", second_req.symbol, is_result_symbol);
+                    if first_req.condition == Condition::OR {
+                        rhs = process_user_input(&second_req.symbol);
+                    } else {
+                        rhs = Some(!(lhs.unwrap()));
+                    }
+                }
             }
             Err(_e) => {
                 return None;
@@ -516,7 +558,10 @@ fn process_formula(
             knowledge_cache_manager.resolve_stack.remove(&item.symbol);
             match env::var("EXPERT_MODE") {
                 Ok(_v) => {
-                    rhs = process_user_input(&item.symbol);
+                    println!(" RES SYM 7 {} {}", item.symbol, is_result_symbol);
+                    if !is_result_symbol {
+                        rhs = process_user_input(&item.symbol);
+                    }
                 }
                 Err(_e) => {}
             }
@@ -528,7 +573,6 @@ fn process_formula(
         );
         previous = item;
     }
-
     Some(lhs)
 }
 

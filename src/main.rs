@@ -45,7 +45,7 @@ fn launch_resolve(mut ke: KnowledgeEngine) {
     };
     for element in &ke.search.clone() {
         ke.current_symbol = Some(element.to_string());
-        println!("Resolving symbol {}\n", element);
+        println!("Resolving symbol {}", element);
         println!(
             "{:?} is {}\n",
             element,

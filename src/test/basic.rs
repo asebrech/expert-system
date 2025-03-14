@@ -38,7 +38,7 @@ mod test {
                 &mut engine,
                 &mut knowledge_cache_manager
             ),
-            Some(true)
+            None
         );
     }
 }
