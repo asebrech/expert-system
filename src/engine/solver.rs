@@ -292,76 +292,42 @@ fn get_knowledge_state(
             return None;
         }
         if let Some(krr) = &knowledge.result_requirement {
-            for item in krr.iter() {
-                if knowledge.calcul.is_some()
-                    && knowledge_cache_manager
-                        .resolved_data
-                        .contains_key(&knowledge.calcul.clone().unwrap())
-                {
-                    let temp = knowledge_cache_manager
-                        .resolved_data
-                        .get(&knowledge.calcul.clone().unwrap())
-                        .unwrap();
-                    if item.symbol == symbol {
-                        println!(
-                            "Cached data found for {} => {:?}",
-                            knowledge.calcul.clone().unwrap().green(),
-                            temp.map_or("undetermined".to_string(), |v| v.to_string())
-                        );
-
-                        //might possibly want to return here or perform some action
-                        continue;
-                    }
-                } else {
-                    println!("checking {} {}", symbol.green(), is_result_symbol);
-                    let res2 = process_formula(
-                        symbol,
-                        krr,
-                        engine,
-                        knowledge.calcul.as_ref(),
-                        knowledge_cache_manager,
-                        depth,
-                        true,
-                    );
-                    //println!("Enever 2 {:?}", res2);
-                    if res2.is_none() {
-                        //ask user to clarify
-                        match env::var("EXPERT_MODE") {
-                            Ok(_v) => {
-                                knowledge_cache_manager
-                                    .resolve_stack
-                                    .remove(&symbol.to_string());
-                                println!(" RES SYM 4 {} {}", knowledge.symbol, is_result_symbol);
-                                return process_user_input(&knowledge.symbol);
+            //loop sur tout les req, garder les valeurs dans un array
+            //return la reponse en fonction de si le symbol que l on a rechercher est true ou false
+            let mut res: HashMap<String, Option<bool>> = HashMap::new();
+            for result_requirement in &knowledge.result_requirement {
+                let mut prev: Option<Requirement> = None;
+                for ele in result_requirement.iter() {
+                    println!("checking {} {}", ele.symbol, prev.is_some());
+                    if prev.is_some() {
+                        let unwr = prev.unwrap();
+                        println!("cond : {:?} {:?}", unwr.condition, res);
+                        if unwr.condition == Condition::AND {
+                            res.insert(ele.symbol.to_string(), Some(true));
+                        } else if unwr.condition == Condition::XOR {
+                            let cur = res.get(&unwr.symbol);
+                            if cur.is_some() {
+                                res.insert(ele.symbol.to_string(), Some(!cur.unwrap().unwrap()));
                             }
-                            Err(_e) => {
-                                knowledge_cache_manager
-                                    .resolve_stack
-                                    .remove(&symbol.to_string());
-                                return None;
-                            }
+                        } else {
+                            res.insert(ele.symbol.to_string(), process_user_input(&ele.symbol));
                         }
-                    } else if !res2.unwrap() {
-                        //resolution is false
-                        println!("Resolution is false for {:?}", knowledge.calcul);
-                        //push in array
-                        knowledge_cache_manager
-                            .resolve_stack
-                            .remove(&knowledge.symbol);
-                        knowledge_cache_manager
-                        .resolved_data
-                        .insert(knowledge.calcul.clone().unwrap().clone(), Some(false));
-                        answers.push(false);
-                        return Some(false);
-                        continue;
+                    } else {
+                        if ele.condition == Condition::AND {
+                            res.insert(ele.symbol.to_string(), Some(true));
+                        } else {
+                            res.insert(ele.symbol.to_string(), process_user_input(&ele.symbol));
+                        }
                     }
-                    if knowledge.calcul.is_some() {
-                        knowledge_cache_manager
-                            .resolved_data
-                            .insert(knowledge.calcul.clone().unwrap().clone(), Some(true));
-                    }
+                    prev = Some(ele.clone());
                 }
             }
+            println!("returning {}", symbol);
+            let r = res.get(symbol);
+            if r.is_some() {
+                return *r.unwrap();
+            }
+            return None;
         }
         if knowledge.calcul.is_some() {
             knowledge_cache_manager
@@ -402,6 +368,7 @@ fn get_value_from_result_knowledge(knowledge: &Knowledge, symbol_to_find: &str) 
     let mut prev: Option<Condition> = None;
     let mut found = false;
     for ele in result_requirement.iter() {
+        println!("req {:?}", ele);
         if found && prev.is_some() {
             break;
         }
@@ -409,6 +376,8 @@ fn get_value_from_result_knowledge(knowledge: &Knowledge, symbol_to_find: &str) 
             found = true;
             if prev.is_some() {
                 break;
+            } else {
+                prev = Some(ele.condition);
             }
         } else {
             prev = Some(ele.condition);
@@ -416,6 +385,7 @@ fn get_value_from_result_knowledge(knowledge: &Knowledge, symbol_to_find: &str) 
     }
     if found && prev.is_some() {
         let cond = prev.unwrap();
+        println!("yelleelle {:?}", prev);
         if cond == Condition::AND {
             return Some(true);
         }
