@@ -78,9 +78,8 @@ fn merge_knowledge_engines(ke1: KnowledgeEngine, ke2: KnowledgeEngine) -> Knowle
 }
 
 fn get_user_input() -> std::string::String {
-    let mut input = String::new();
-
     loop {
+        let mut input = String::new();
         println!("Want to add some shit dude ? (y/n)");
         io::stdout().flush().unwrap();
 
@@ -90,10 +89,9 @@ fn get_user_input() -> std::string::String {
 
         let trimmed_input = input.trim();
         if trimmed_input == "y" || trimmed_input == "n" {
-            break;
+            return trimmed_input.to_string();
         }
     }
-    input
 }
 
 fn knowledge_engine_from_file(file_path: &str) -> KnowledgeEngine {
@@ -135,8 +133,7 @@ fn main() {
 
         let input = get_user_input();
 
-        let trimmed_input = input.trim();
-        if trimmed_input == "y" {
+        if input == "y" {
             println!("Enter your new knowledge : []=>[]\\n ?[]\\n =[]\\n then ctrl+D");
 
             for line in stdin.lock().lines() {
