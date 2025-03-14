@@ -95,6 +95,15 @@ fn get_user_input() -> std::string::String {
     input
 }
 
+fn knowledge_engine_from_file(file_path: &str) -> KnowledgeEngine {
+    let lines = read_file(file_path).unwrap_or_else(|e| {
+        println!("Error reading file: {}", e);
+        println!("Expert System usage : file");
+        std::process::exit(1);
+    });
+    knowledge_engine_from_lines(lines.clone())
+}
+
 fn main() {
     dotenv().ok();
     env_logger::init_from_env(Env::default().default_filter_or("debug"));
@@ -102,13 +111,13 @@ fn main() {
     ensure_program_args(&args);
     let file_path = &args[1];
     // println!("{:?}", args);
-
     let lines = read_file(file_path).unwrap_or_else(|e| {
         println!("Error reading file: {}", e);
         println!("Expert System usage : file");
         std::process::exit(1);
     });
-    let ke = knowledge_engine_from_lines(lines.clone());
+
+    let ke = knowledge_engine_from_file(file_path);
 
     launch_resolve(ke);
 

@@ -13,7 +13,7 @@ mod test {
         let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
             previous_line: None,
             resolved_data: HashMap::new(),
-            resolve_stack: HashSet::new()
+            resolve_stack: HashSet::new(),
         };
 
         let mut actual_responses = Vec::new();
