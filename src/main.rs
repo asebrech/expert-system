@@ -78,9 +78,8 @@ fn merge_knowledge_engines(ke1: KnowledgeEngine, ke2: KnowledgeEngine) -> Knowle
 }
 
 fn get_user_input() -> std::string::String {
-    let mut input = String::new();
-
     loop {
+        let mut input = String::new();
         println!("Want to add some shit dude ? (y/n)");
         io::stdout().flush().unwrap();
 
@@ -88,11 +87,11 @@ fn get_user_input() -> std::string::String {
             .read_line(&mut input)
             .expect("Failed to read line");
 
-        if input.contains("y") || input.contains("n") {
-            break;
+        let trimmed_input = input.trim();
+        if trimmed_input == "y" || trimmed_input == "n" {
+            return trimmed_input.to_string();
         }
     }
-    input
 }
 
 fn knowledge_engine_from_file(file_path: &str) -> KnowledgeEngine {
@@ -126,20 +125,20 @@ fn main() {
         Err(_e) => return,
     }
 
-    loop {
-        let mut ke = knowledge_engine_from_lines(lines.clone());
+    let stdin = io::stdin();
+    let mut all_lines = lines.clone();
 
-        let stdin = io::stdin();
-        let mut lines: Vec<String> = Vec::new();
+    loop {
+        let mut ke = knowledge_engine_from_lines(all_lines.clone());
 
         let input = get_user_input();
 
-        if input.contains("y") {
+        if input == "y" {
             println!("Enter your new knowledge : []=>[]\\n ?[]\\n =[]\\n then ctrl+D");
 
             for line in stdin.lock().lines() {
                 match line {
-                    Ok(content) => lines.push(content),
+                    Ok(content) => all_lines.push(content),
                     Err(e) => {
                         eprintln!("Error reading line: {}", e);
                         break;
@@ -147,7 +146,7 @@ fn main() {
                 }
             }
 
-            let new_ke = knowledge_engine_from_lines(lines);
+            let new_ke = knowledge_engine_from_lines(all_lines.clone());
             ke = merge_knowledge_engines(ke, new_ke);
         } else {
             break;
