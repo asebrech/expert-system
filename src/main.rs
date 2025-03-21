@@ -2,10 +2,10 @@ mod data_types;
 mod engine;
 mod parsing;
 mod test;
-use colored::Colorize;
 use data_types::fact::*;
 use dotenv::dotenv;
-use engine::solver::{prove, KnowledgeCacheManager, KnowledgeEngine};
+use engine::neo_solver::{neo_prove, KnowledgeCacheManager, KnowledgeEngine};
+use engine::solver::{prove};
 use env_logger::Env;
 use parsing::parser::parse_lines;
 use std::collections::{HashMap, HashSet};
@@ -47,11 +47,12 @@ fn launch_resolve(mut ke: KnowledgeEngine) {
         ke.current_symbol = Some(element.to_string());
         println!("Resolving symbol {}", element);
         println!(
-            "{:?} is {}\n",
+            "{:?} is {:?}\n",
             element,
-            prove(element.to_string(), &mut ke, &mut knowledge_cache_manager)
+            neo_prove(element.to_string(), &mut ke, &mut knowledge_cache_manager)
+            /*prove(element.to_string(), &mut ke, &mut knowledge_cache_manager)
                 .map_or("undetermined".to_string(), |v| v.to_string())
-                .magenta()
+                .magenta()*/
         );
     }
 }

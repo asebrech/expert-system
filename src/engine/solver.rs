@@ -99,6 +99,7 @@ fn get_knowledge_state(
         print_line(depth, format!("{}{} is false", "\t".repeat(depth),
             symbol));
         if is_result_symbol {
+            println!("nulled res symbol ");
             return None;
         }
         return Some(false);
@@ -116,8 +117,7 @@ fn get_knowledge_state(
     for ele in initial_vec {
         if ele.fact {
             println!(
-                "{}{}{} is a fact that is {}",
-                "\t".repeat(depth),
+                "{}{} is a fact that is {}",
                 if ele.not { "!" } else { "" },
                 symbol,
                 ele.fact && !ele.not
@@ -203,7 +203,7 @@ fn get_knowledge_state(
                 knowledge_cache_manager
                     .resolve_stack
                     .remove(&symbol.to_string());
-                return get_value_from_result_knowledge(knowledge, &knowledge.symbol);
+                return get_value_from_result_knowledge(knowledge, &knowledge.symbol, engine, current_calcul, knowledge_cache_manager, depth);
             }
             continue;
         }
@@ -298,7 +298,8 @@ fn get_knowledge_state(
             for result_requirement in &knowledge.result_requirement {
                 let mut prev: Option<Requirement> = None;
                 for ele in result_requirement.iter() {
-                    println!("checking {} {}", ele.symbol, prev.is_some());
+                    let ele_val = get_value_from_result_knowledge(knowledge, &ele.symbol, engine, current_calcul, knowledge_cache_manager, depth);
+                    println!("checking {} {} {:?}", ele.symbol, prev.is_some(), ele_val);
                     if prev.is_some() {
                         let unwr = prev.unwrap();
                         println!("cond : {:?} {:?}", unwr.condition, res);
@@ -363,9 +364,12 @@ fn get_knowledge_state(
     Some(final_result)
 }
 
-fn get_value_from_result_knowledge(knowledge: &Knowledge, symbol_to_find: &str) -> Option<bool> {
+fn get_value_from_result_knowledge(knowledge: &Knowledge, symbol_to_find: &str,     engine: &KnowledgeEngine,
+    current_calcul: Option<&String>,
+    knowledge_cache_manager: &mut KnowledgeCacheManager,
+    mut depth: usize) -> Option<bool> {
     let result_requirement = knowledge.result_requirement.as_ref()?;
-    let mut prev: Option<Condition> = None;
+    let mut prev: Option<Requirement> = None;
     let mut found = false;
     for ele in result_requirement.iter() {
         println!("req {:?}", ele);
@@ -376,18 +380,26 @@ fn get_value_from_result_knowledge(knowledge: &Knowledge, symbol_to_find: &str) 
             found = true;
             if prev.is_some() {
                 break;
-            } else {
-                prev = Some(ele.condition);
             }
         } else {
-            prev = Some(ele.condition);
+            prev = Some(ele.clone());
         }
     }
     if found && prev.is_some() {
-        let cond = prev.unwrap();
-        println!("yelleelle {:?}", prev);
-        if cond == Condition::AND {
+        let prev_sym = prev.unwrap();
+        println!("yelleelle {:?} {}", prev_sym, symbol_to_find);
+        if prev_sym.condition  == Condition::AND {
             return Some(true);
+        } else if prev_sym.condition == Condition::XOR {
+            let mut lhs = get_knowledge_state(&prev_sym.symbol, engine, current_calcul, knowledge_cache_manager, depth, true);
+            let mut rhs = get_knowledge_state(&symbol_to_find, engine, current_calcul, knowledge_cache_manager, depth, true);
+            if lhs.is_none() {
+                lhs = process_user_input(&prev_sym.symbol);
+            }
+            if rhs.is_none() {
+                rhs = process_user_input(&symbol_to_find);
+            }
+            return Some(compare_boolean(lhs.unwrap(), rhs.unwrap(), Condition::XOR)); 
         }
     }
     None
