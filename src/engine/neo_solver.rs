@@ -218,7 +218,7 @@ pub fn get_symbol_value(
         print_line(depth, format!("AAA {} is false", symbol));
         return false;
     }
-    let initial_vec = initial_vec.unwrap();
+    let mut initial_vec = initial_vec.unwrap().clone();
     for knowledge in initial_vec.iter() {
         if knowledge.fact {
             print_line(
@@ -234,17 +234,33 @@ pub fn get_symbol_value(
 			 !knowledge.not;
         }
     }
+    if knowledge_cache_manager.resolve_stack.contains(symbol) {
+        println!("Cyclic for {}", symbol);
+        return false;
+    }
+    knowledge_cache_manager.resolve_stack.insert(symbol.to_string());
     //probably add the has same symbol in knowledge around here
+    
     let mut answers: Vec<bool> = vec![];
+    if symbol.len() > 1 && knowledge_cache_manager.previous_line.is_some() {
+        let prev_line = knowledge_cache_manager.previous_line.clone().unwrap();
+        initial_vec = initial_vec.iter() // Use `iter()` instead of `into_iter()` to avoid moving ownership
+        .filter(|e| e.line == prev_line)
+        .cloned() // Clone elements to get owned `fact::Knowledge`
+        .collect(); // Collect into a new `Vec<fact::Knowledge>`
+    }
 
+    for (i, knowledge) in initial_vec.iter().enumerate() {
+        knowledge_cache_manager.previous_line = Some(knowledge.line.clone());
+        
+        //println!("line : {}", knowledge.line.red());
+        if knowledge.symbol != symbol && !knowledge_contain_symbol(symbol, knowledge, false, true) {
+            println!("{}", "Does not contain !".red());
+        } else {
+          // println!("{}", format!("{} {:?}", symbol.blue(), knowledge));
+        }
 
-    for (_i, knowledge) in initial_vec.iter().enumerate() {
-		if knowledge_cache_manager.resolve_stack.contains(&knowledge.line) {
-			//println!("Cyclic");
-			//continue;
-		}
-		knowledge_cache_manager.resolve_stack.insert(knowledge.line.clone());
-		if knowledge_cache_manager.resolve_stack.contains(symbol) {
+		if knowledge_cache_manager.resolved_data.contains_key(symbol) {
 			println!("Cached");
 			answers.push(*knowledge_cache_manager.resolved_data.get(symbol).unwrap());
 			continue;
@@ -281,6 +297,7 @@ pub fn get_symbol_value(
         }
         answers.push(lhs_value && rhs_value);
     }
+    knowledge_cache_manager.resolve_stack.remove(symbol);
     let final_result = answers.contains(&true);
     if final_result && answers.contains(&false) {
         println!("{}", "Contradiction found".red());
