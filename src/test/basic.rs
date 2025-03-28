@@ -3,7 +3,7 @@ mod test {
     use std::collections::{HashMap, HashSet};
 
     use crate::{
-        engine::solver::{prove, KnowledgeCacheManager},
+        engine::neo_solver::{neo_prove, KnowledgeCacheManager},
         knowledge_engine_from_file,
     };
 
@@ -16,7 +16,7 @@ mod test {
             resolve_stack: HashSet::new()
         };
         assert_eq!(
-            prove(
+            neo_prove(
                 engine.search.first().unwrap().to_string(),
                 &mut engine,
                 &mut knowledge_cache_manager
@@ -33,7 +33,7 @@ mod test {
             resolve_stack: HashSet::new()
         };
         assert_eq!(
-            prove(
+            neo_prove(
                 engine.search.first().unwrap().to_string(),
                 &mut engine,
                 &mut knowledge_cache_manager

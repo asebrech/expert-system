@@ -3,8 +3,7 @@ mod test {
     use std::collections::{HashMap, HashSet};
 
     use crate::{
-        engine::solver::{prove, KnowledgeCacheManager},
-        knowledge_engine_from_file,
+        engine::neo_solver::{neo_prove, KnowledgeCacheManager}, knowledge_engine_from_file
     };
 
     fn test_file(file_path: &str, expected_responses: Vec<bool>) {
@@ -20,7 +19,7 @@ mod test {
 
         for element in &ke.search.clone() {
             ke.current_symbol = Some(element.to_string());
-            let response = prove(element.to_string(), &mut ke, &mut knowledge_cache_manager);
+            let response = neo_prove(element.to_string(), &mut ke, &mut knowledge_cache_manager);
             actual_responses.push(response.unwrap_or(false));
         }
 

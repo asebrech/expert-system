@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::io::{stdin, stdout, Write};
+use std::iter::Map;
 use std::{thread, time};
 
 use colored::Colorize;
 
-use crate::data_types::fact::Condition;
+use crate::data_types::fact::{Condition, Requirement};
 use crate::{data_types, Knowledge};
 
 pub struct KnowledgeEngine {
@@ -14,12 +15,12 @@ pub struct KnowledgeEngine {
 }
 
 pub struct KnowledgeCacheManager {
-    pub resolved_data: HashMap<String, Option<bool>>, //keeps track of resolved formulas
+    pub resolved_data: HashMap<String, bool>, //keeps track of resolved formulas
     pub previous_line: Option<String>,
     pub resolve_stack: HashSet<String>,
 }
 
-pub fn process_user_input(symbol: &str) -> Option<bool> {
+pub fn process_user_input(symbol: &str) -> bool {
     let mut s = String::new();
     println!(
         "Undetermined knowledge found, asking user to clarify symbol {}, enter true or false.",
@@ -35,7 +36,7 @@ pub fn process_user_input(symbol: &str) -> Option<bool> {
     if let Some('\r') = s.chars().next_back() {
         s.pop();
     }
-    Some(s == "true")
+    s == "true"
 }
 
 /*
@@ -96,9 +97,12 @@ fn resolve_lhs_knowledge(
 
     for item in knowledge.requirements.iter() {
         if previous_value.is_some() {
-            current_value = Some(get_symbol_value(&item.symbol, engine, knowledge_cache_manager, depth));
+			let sym = get_symbol_value(&item.symbol, engine, knowledge_cache_manager, depth);
+			println!("curr {} {}", item.symbol, if item.not { !sym && item.not } else { sym });
+            current_value = Some(if item.not { !sym && item.not } else { sym });
         } else {
-            previous_value = Some(get_symbol_value(&item.symbol, engine, knowledge_cache_manager, depth));
+			let sym = get_symbol_value(&item.symbol, engine, knowledge_cache_manager, depth);
+            previous_value = Some(if item.not { !sym && item.not } else { sym });
         }
         if previous_value.is_some() && current_value.is_some() && condition.is_some() {
             previous_value = Some(compare_boolean(previous_value.unwrap(), current_value.unwrap(), condition.unwrap()));
@@ -109,13 +113,93 @@ fn resolve_lhs_knowledge(
 }
 
 fn resolve_rhs_knowledge(
-    knowledge: &Knowledge,
+    requirements: &Vec<Requirement>,
     engine: &KnowledgeEngine,
     knowledge_cache_manager: &mut KnowledgeCacheManager,
     mut depth: usize,
-) -> bool {
-    false
+) -> (HashMap<String, bool>, bool) {
+    let mut condition: Condition = Condition::END;
+    let mut previous_value: bool = false;
+    let mut current_value: bool = false;
+	let mut resolved_map: HashMap<String, bool> = HashMap::new();
+
+    for (i, item) in requirements.iter().enumerate() {
+        if i > 0 {
+			//the loop has already iterated once and previous value is properly set
+            current_value = get_rhs_requirement_value(&item,  &condition, &resolved_map, engine, knowledge_cache_manager, depth);
+			resolved_map.insert(item.symbol.clone(), current_value);
+        } else {
+			//if the loop is only starting to iterate
+			condition = item.condition;
+            previous_value = get_rhs_requirement_value(&item,  &condition, &resolved_map, engine, knowledge_cache_manager, depth);
+			resolved_map.insert(item.symbol.clone(), previous_value);
+        }
+        if i > 0 && condition != Condition::END {
+            previous_value = compare_boolean(previous_value, current_value, condition);
+			resolved_map.insert(item.symbol.clone(), previous_value);
+        }
+
+    }
+    return (resolved_map, previous_value);
 }
+
+pub fn knowledge_contain_symbol(symbol: &str, knowledge: &Knowledge, check_lhs: bool, check_requirement: bool) -> bool {
+	let mut res = false;
+	if check_lhs {
+		knowledge.requirements.iter().for_each(|e| {
+			if e.symbol == symbol {
+				res = true;
+			}
+		});
+	}
+	if check_requirement && knowledge.result_requirement.is_some() {
+		knowledge.result_requirement.clone().unwrap().iter().for_each(|know| {
+			if know.symbol == symbol {
+				res = true;
+			}
+		});
+	}
+	return res;
+}
+
+pub fn get_rhs_requirement_value(
+	requirement: &Requirement,
+	precedent_condition: &Condition,
+	resolved_map: &HashMap<String, bool>,
+    engine: &KnowledgeEngine,
+    knowledge_cache_manager: &mut KnowledgeCacheManager,
+    mut depth: usize) -> bool {
+		print_line(depth, format!("processing {:?}", requirement.symbol));
+		if *precedent_condition == Condition::AND {
+			return true;
+		}
+
+		if let Some(sym) = resolved_map.get(&requirement.symbol) {
+			return *sym;
+		}
+		let sym = get_symbol_value(&requirement.symbol, engine, knowledge_cache_manager, depth);
+		let exists = engine.data.get(&requirement.symbol);
+		if sym == false  {
+			let mut is_undefined = exists.is_none();
+
+			if exists.is_some() {
+				let e: &Vec<Knowledge> = exists.unwrap();
+				//println!("init vec is empty {:?}", e);
+				let final_vec: Vec<_> = e.iter().filter(|know| knowledge_contain_symbol(&requirement.symbol, know, true, true)).cloned().collect();
+				//println!("Final vec is empty {}, {:?}", final_vec.len(), final_vec);
+				if final_vec.len() == 0{
+					is_undefined = true;
+				}
+			}
+
+			if is_undefined {
+			//undefined result symbol
+				return process_user_input(&requirement.symbol);
+			}
+
+		}
+		return false;
+	}
 
 pub fn get_symbol_value(
     symbol: &str,
@@ -131,7 +215,7 @@ pub fn get_symbol_value(
         thread::sleep(ten_millis);
     }
     if initial_vec.is_none() {
-        print_line(depth, format!("{} is false", symbol));
+        print_line(depth, format!("AAA {} is false", symbol));
         return false;
     }
     let initial_vec = initial_vec.unwrap();
@@ -146,13 +230,25 @@ pub fn get_symbol_value(
                     knowledge.fact && !knowledge.not
                 ),
             );
-            return knowledge.fact && !knowledge.not;
+            return knowledge.fact &&
+			 !knowledge.not;
         }
     }
     //probably add the has same symbol in knowledge around here
-
     let mut answers: Vec<bool> = vec![];
-    for knowledge in initial_vec.iter() {
+
+
+    for (_i, knowledge) in initial_vec.iter().enumerate() {
+		if knowledge_cache_manager.resolve_stack.contains(&knowledge.line) {
+			//println!("Cyclic");
+			//continue;
+		}
+		knowledge_cache_manager.resolve_stack.insert(knowledge.line.clone());
+		if knowledge_cache_manager.resolve_stack.contains(symbol) {
+			println!("Cached");
+			answers.push(*knowledge_cache_manager.resolved_data.get(symbol).unwrap());
+			continue;
+		}
         print_line(depth, format!("processing {:?}", knowledge.line));
         let lhs_value = resolve_lhs_knowledge(
             knowledge,
@@ -160,13 +256,30 @@ pub fn get_symbol_value(
             knowledge_cache_manager,
             depth,
         );
-        if lhs_value {
+		let mut rhs_value = true; //true by default, will be modified if a knowledge result exists
+        if lhs_value || !lhs_value && knowledge.not {
             if knowledge.result_requirement.is_some() {
+				knowledge_cache_manager.previous_line = Some(knowledge.line.clone());
+				let res = resolve_rhs_knowledge(&knowledge.result_requirement.clone().unwrap(), engine, knowledge_cache_manager, depth);
+				if res.1 == false {
+					println!("The evaluated result requirement is false, the condition cannot be proven");
+					//checking if the value was still given true
+					rhs_value = false;
+				} else {
+					let sym_val = res.0.get(symbol);
+					if sym_val.is_some() {
+						rhs_value = *sym_val.unwrap();
+					} else {
+						println!("Error occured, no result symbol found in result requirement");
+						rhs_value = false;
+					}
+				}
+				answers.push(lhs_value && rhs_value);
                 //resolve the result requirement here, and find 
                 //if the resolution is correct and symbol is correct
             }
         }
-        answers.push(lhs_value);
+        answers.push(lhs_value && rhs_value);
     }
     let final_result = answers.contains(&true);
     if final_result && answers.contains(&false) {
@@ -184,5 +297,6 @@ pub fn get_symbol_value(
         .resolve_stack
         .remove(&symbol.to_string());
     println!("returning {} {}", symbol, final_result);
+	knowledge_cache_manager.resolved_data.insert(symbol.to_string(), final_result);
     return final_result;
 }
