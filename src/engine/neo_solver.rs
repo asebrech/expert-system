@@ -83,6 +83,9 @@ pub fn neo_prove(symbol: String,
 ) -> Option<bool> {
     knowledge_cache_manager.resolve_stack.clear();
     knowledge_cache_manager.resolved_data.clear();
+    knowledge_cache_manager.previous_line = None;
+    knowledge_cache_manager.result_knowledge_stack.clear();
+    knowledge_cache_manager.rhs_symbol_map.clear();
     return get_symbol_value(&symbol, engine, knowledge_cache_manager, false, 0);
 }
 
