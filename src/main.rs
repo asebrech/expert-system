@@ -82,7 +82,7 @@ fn merge_knowledge_engines(ke1: KnowledgeEngine, ke2: KnowledgeEngine) -> Knowle
 fn get_user_input() -> std::string::String {
     loop {
         let mut input = String::new();
-        println!("Want to add some shit dude ? (y/n)");
+        println!("Want to add some STUFF dude ? (y/n)");
         io::stdout().flush().unwrap();
 
         io::stdin()
