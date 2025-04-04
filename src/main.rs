@@ -2,6 +2,7 @@ mod data_types;
 mod engine;
 mod parsing;
 mod test;
+use colored::Colorize;
 use data_types::fact::*;
 use dotenv::dotenv;
 use engine::neo_solver::{neo_prove, KnowledgeCacheManager, KnowledgeEngine};
@@ -48,9 +49,11 @@ fn launch_resolve(mut ke: KnowledgeEngine) {
         ke.current_symbol = Some(element.to_string());
         println!("Resolving symbol {}", element);
         println!(
-            "{:?} is {:?}\n",
+            "{:?} is {}\n",
             element,
             neo_prove(element.to_string(), &mut ke, &mut knowledge_cache_manager)
+            .map_or("undetermined".to_string(), |v| v.to_string())
+            .magenta()
             /*prove(element.to_string(), &mut ke, &mut knowledge_cache_manager)
                 .map_or("undetermined".to_string(), |v| v.to_string())
                 .magenta()*/
@@ -121,11 +124,6 @@ fn main() {
     let ke = knowledge_engine_from_file(file_path);
 
     launch_resolve(ke);
-
-    match env::var("EXPERT_MODE") {
-        Ok(_v) => {}
-        Err(_e) => return,
-    }
 
     let stdin = io::stdin();
     let mut all_lines = lines.clone();

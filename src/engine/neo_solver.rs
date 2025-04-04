@@ -93,7 +93,7 @@ fn resolve_lhs_knowledge(
     knowledge: &Knowledge,
     engine: &KnowledgeEngine,
     knowledge_cache_manager: &mut KnowledgeCacheManager,
-    mut depth: usize,
+    depth: usize,
 ) -> bool {
     let mut condition: Option<Condition> = None;
     let mut previous_value: Option<bool> = None;
@@ -110,9 +110,7 @@ fn resolve_lhs_knowledge(
             
         } else {
 			let sym = get_symbol_value(&item.symbol, engine, knowledge_cache_manager, true, depth);
-            //previous_value = Some(if item.not { !sym && item.not } else { sym });
-            if sym.is_some() { 
-                let v = sym.unwrap();
+            if sym.is_some() {
                 previous_value = if item.not { Some(!sym.unwrap() && item.not) } else { sym };
             } else {
                 previous_value = sym;
@@ -130,7 +128,7 @@ fn resolve_rhs_knowledge(
     requirements: &Vec<Requirement>,
     engine: &KnowledgeEngine,
     knowledge_cache_manager: &mut KnowledgeCacheManager,
-    mut depth: usize,
+    depth: usize,
 ) -> (HashMap<String, bool>, bool) {
     let mut condition: Condition = Condition::END;
     let mut previous_value: bool = false;
@@ -256,24 +254,22 @@ pub fn get_symbol_value(
         }
     }
     if knowledge_cache_manager.resolve_stack.contains(symbol) {
-        //println!("Cyclic for {}", symbol);
         if !is_result_symbol {
             return Some(false);
         }
     }
     knowledge_cache_manager.resolve_stack.insert(symbol.to_string());
-    //probably add the has same symbol in knowledge around here
     
     let mut answers: Vec<bool> = vec![];
     if symbol.len() > 1 && knowledge_cache_manager.previous_line.is_some() {
         let prev_line = knowledge_cache_manager.previous_line.clone().unwrap();
-        initial_vec = initial_vec.iter() // Use `iter()` instead of `into_iter()` to avoid moving ownership
+        initial_vec = initial_vec.iter() 
         .filter(|e| e.line == prev_line)
-        .cloned() // Clone elements to get owned `fact::Knowledge`
-        .collect(); // Collect into a new `Vec<fact::Knowledge>`
+        .cloned() 
+        .collect(); 
     }
 
-    for (i, knowledge) in initial_vec.iter().enumerate() {
+    for knowledge in initial_vec.iter() {
         knowledge_cache_manager.previous_line = Some(knowledge.line.clone());
         if knowledge_cache_manager.result_knowledge_stack.contains(&knowledge.line) {
             if knowledge_cache_manager.rhs_symbol_map.len() > 0 {
@@ -286,11 +282,8 @@ pub fn get_symbol_value(
             }
            continue;
         }
-        //println!("line : {}", knowledge.line.red());
         if knowledge.symbol != symbol && !knowledge_contain_symbol(symbol, knowledge, false, true) {
             println!("{}", "Does not contain !".red());
-        } else {
-          // println!("{}", format!("{} {:?}", symbol.blue(), knowledge));
         }
 
 		if knowledge_cache_manager.resolved_data.contains_key(symbol) {
@@ -304,7 +297,7 @@ pub fn get_symbol_value(
             knowledge_cache_manager,
             depth,
         );
-		let mut rhs_value = true; //true by default, will be modified if a knowledge result exists
+		let mut rhs_value = true;
         if lhs_value || !lhs_value && knowledge.not {
             if knowledge.result_requirement.is_some() {
 				knowledge_cache_manager.previous_line = Some(knowledge.line.clone());
@@ -318,8 +311,6 @@ pub fn get_symbol_value(
                 } else {
                     continue;
                 }
-                //resolve the result requirement here, and find 
-                //if the resolution is correct and symbol is correct
             }
         }
         answers.push(lhs_value && rhs_value);
@@ -337,7 +328,6 @@ pub fn get_symbol_value(
             "If one of the answers are true, the symbol will be true".yellow()
         );
     }
-    //il manque le !
     print_line(depth, format!("{} is {}",
     symbol.green(),
     final_result));
