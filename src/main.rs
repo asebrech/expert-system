@@ -5,7 +5,6 @@ mod test;
 use data_types::fact::*;
 use dotenv::dotenv;
 use engine::neo_solver::{neo_prove, KnowledgeCacheManager, KnowledgeEngine};
-use engine::solver::{prove};
 use env_logger::Env;
 use parsing::parser::parse_lines;
 use std::collections::{HashMap, HashSet};
@@ -42,6 +41,8 @@ fn launch_resolve(mut ke: KnowledgeEngine) {
         resolved_data: HashMap::new(),
         previous_line: None,
         resolve_stack: HashSet::new(),
+        result_knowledge_stack: HashSet::new(),
+        rhs_symbol_map: vec![]
     };
     for element in &ke.search.clone() {
         ke.current_symbol = Some(element.to_string());

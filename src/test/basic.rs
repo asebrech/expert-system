@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod test {
-    use std::collections::{HashMap, HashSet};
+    use std::{collections::{HashMap, HashSet}, vec};
 
     use crate::{
         engine::neo_solver::{neo_prove, KnowledgeCacheManager},
@@ -13,7 +13,9 @@ mod test {
         let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
             previous_line: None,
             resolved_data: HashMap::new(),
-            resolve_stack: HashSet::new()
+            resolve_stack: HashSet::new(),
+            result_knowledge_stack: HashSet::new(),
+            rhs_symbol_map: vec![]
         };
         assert_eq!(
             neo_prove(
@@ -30,7 +32,9 @@ mod test {
         let mut knowledge_cache_manager: KnowledgeCacheManager = KnowledgeCacheManager {
             previous_line: None,
             resolved_data: HashMap::new(),
-            resolve_stack: HashSet::new()
+            resolve_stack: HashSet::new(),
+            result_knowledge_stack: HashSet::new(),
+            rhs_symbol_map: vec![]
         };
         assert_eq!(
             neo_prove(
@@ -38,7 +42,7 @@ mod test {
                 &mut engine,
                 &mut knowledge_cache_manager
             ),
-            None
+            Some(true)
         );
     }
 }

@@ -13,6 +13,8 @@ mod test {
             previous_line: None,
             resolved_data: HashMap::new(),
             resolve_stack: HashSet::new(),
+            result_knowledge_stack: HashSet::new(),
+            rhs_symbol_map: vec![]
         };
 
         let mut actual_responses = Vec::new();
